@@ -18,6 +18,8 @@
 # construction. tests/model/test_parameter_profiles.py asserts exactly that.
 #
 # Status values:
+#   fit_summary       recorded summary of multiple fits, not one fit result
+#   model_convention  fixed modelling choice, not independently estimated
 #   fitted            estimated against named published data
 #   swept             chosen by scanning for a target behaviour, not fitted
 #   non_identifiable  not determined by the data on its own
@@ -93,13 +95,35 @@ ox:
       K_act_ox:
         value: 208
         units: "MWBUILTINPREFIX_micro_MWBUILTINUNIT_molarity"
-        status: fitted
-        source: "Delaunay et al. 2000 EMBO J, Fig. 2C; Python densitometry + fminsearch"
+        status: fit_summary
+        source: "Ichnos_PULSE/docs/oxidative_model_manifest.md @ e66de65c; Delaunay et al. 2000, Fig. 2C"
+        note: >-
+          Recorded baseline summary of window (218.9 uM) and unmix
+          (198.2 uM) fits to simulated A_ox at 5 min.
+          Original fitting used constant S_ox, k_on_ox=50/h,
+          k_off_ox=150/h and d_x_ox=0.6/h.
+          The source manifest reports a refit of the stored data columns
+          using k_off_ox=160/h and d_x_ox=0.5/h.
+          This did not repeat the original densitometry.
+          Historical unmix output remains frozen because of reported
+          reproducibility differences with scipy.nnls.
+          The committed baseline value is retained.
       n_ox:
         value: 2.75
         units: "dimensionless"
-        status: fitted
-        source: "Delaunay et al. 2000 EMBO J, Fig. 2C; Python densitometry + fminsearch"
+        status: fit_summary
+        source: "Ichnos_PULSE/docs/oxidative_model_manifest.md @ e66de65c; Delaunay et al. 2000, Fig. 2C"
+        note: >-
+          Recorded baseline summary of window (2.97) and unmix (2.54)
+          fits to simulated A_ox at 5 min.
+          Original fitting used constant S_ox, k_on_ox=50/h,
+          k_off_ox=150/h and d_x_ox=0.6/h.
+          The source manifest reports a refit of the stored data columns
+          using k_off_ox=160/h and d_x_ox=0.5/h.
+          This did not repeat the original densitometry.
+          Historical unmix output remains frozen because of reported
+          reproducibility differences with scipy.nnls.
+          The committed baseline value is retained.
       beta_basal_ox:
         value: 5
         units: "MWDERIVEDUNIT_nanomole__liter__hour"
@@ -121,13 +145,22 @@ ox:
       k_on_ox:
         value: 50
         units: "MWDERIVEDUNIT_1__hour"
-        status: non_identifiable
-        source: "non-identifiable with k_off_ox at steady state; only the ratio is constrained"
+        status: model_convention
+        source: "Ichnos_PULSE/docs/oxidative_model_manifest.md @ e66de65c; MASTER section 13"
+        note: >-
+          Fixed modelling convention, not an independently fitted value.
+          The source documentation reports that k_on_ox is not
+          independently identifiable from k_off_ox at steady state.
       k_off_ox:
         value: 160
         units: "MWDERIVEDUNIT_1__hour"
         status: swept
-        source: "parameter sweep against Delaunay et al. 2000 Fig. 2B shape"
+        source: "Ichnos_PULSE/docs/oxidative_model_manifest.md @ e66de65c; Delaunay et al. 2000, Fig. 2B; MASTER section 12"
+        note: >-
+          Selected from the R x d_x grid scan using the t50 criterion
+          and temporal response shape.
+          Not obtained from a joint fit with K_act_ox and n_ox.
+          Retained as the committed baseline value.
       k_x_ox:
         value: 1
         units: "MWDERIVEDUNIT_1__hour"
@@ -137,7 +170,12 @@ ox:
         value: 0.5
         units: "MWDERIVEDUNIT_1__hour"
         status: swept
-        source: "parameter sweep against Delaunay et al. 2000 Fig. 2B shape"
+        source: "Ichnos_PULSE/docs/oxidative_model_manifest.md @ e66de65c; Delaunay et al. 2000, Fig. 2B; MASTER section 12"
+        note: >-
+          Selected from the same R x d_x grid scan as k_off_ox.
+          Selection used temporal plateau and t50 behaviour.
+          Not obtained from a joint fit with K_act_ox and n_ox.
+          Retained as the committed baseline value.
       a_Reporter:
         value: 50
         units: "MWDERIVEDUNIT_nanomole__liter__hour"
@@ -264,13 +302,26 @@ er:
       K_act_er:
         value: 2345.3
         units: "MWBUILTINPREFIX_micro_MWBUILTINUNIT_molarity"
-        status: inherited
-        source: null
+        status: fitted
+        source: "Ichnos_PULSE/integration/ERModule.sbml @ e66de65c, parameter notes; Pincus 2010"
+        note: >-
+          Source SBML records a Hill fit to four peak-splicing dose points:
+          1500, 2200, 3300 and 5000 uM.
+          Responses at 1500 and 5000 uM were estimated from paper text,
+          not precisely digitized measurements.
+          This records the historical fitting claim, not an independently
+          reproduced or uniquely identified calibration.
       n_er:
         value: 3.97
         units: "dimensionless"
-        status: inherited
-        source: null
+        status: fitted
+        source: "Ichnos_PULSE/integration/ERModule.sbml @ e66de65c, parameter notes; Pincus 2010"
+        note: >-
+          Source SBML records the same four-point Hill fit as K_act_er,
+          with reported resnorm=0.0103.
+          Two response values were estimated from paper text.
+          The committed value is retained; uniqueness and uncertainty
+          are not established by this provenance record.
       beta_basal_er:
         value: 0.77
         units: "MWDERIVEDUNIT_nanomole__liter__hour"
@@ -292,27 +343,53 @@ er:
         units: "MWDERIVEDUNIT_1__hour"
         status: inherited
         source: null
+        note: >-
+          Carried over from the source SBML.
+          Its parameter notes label fitting to the Pincus 2010
+          HAC1-splicing time course as PENDING.
+          The origin of this specific numerical value is not documented
+          as a completed fit.
       k_off_er:
         value: 11.09
         units: "MWDERIVEDUNIT_1__hour"
         status: inherited
         source: null
+        note: >-
+          Carried over from the source SBML.
+          Its parameter notes label fitting to the same Pincus 2010
+          time course as PENDING.
+          The origin of this specific numerical value is not documented
+          as a completed fit.
       k_x_er:
         value: 1
         units: "MWDERIVEDUNIT_1__hour"
-        status: inherited
-        source: null
+        status: model_convention
+        source: "Ichnos_PULSE/integration/ERModule.sbml @ e66de65c, parameter notes"
+        note: >-
+          Fixed by construction as a normalization constant.
+          Source notes explicitly state that it was never fitted
+          and report structural non-identifiability with k_off_er/d_x_er.
       d_x_er:
         value: 0
         units: "MWDERIVEDUNIT_1__hour"
         status: inherited
         source: null
-        note: "0 makes the ER sensor a perfect adaptor, so its readout pulses; the ox sensor at 0.5 does not"
+        note: >-
+          Carried over from the source SBML, whose notes mark fitting
+          as PENDING.
+          Zero removes the explicit X_er decay term.
+          Agreement of the resulting adaptation dynamics with the
+          measured time course is not established by this value.
       k_mat_er:
         value: 0.884868741140356
         units: "MWDERIVEDUNIT_1__hour"
-        status: inherited
-        source: null
+        status: literature_derived
+        source: "Ichnos_PULSE/integration/ERModule.sbml @ e66de65c, parameter notes; Khmelinskii 2012"
+        note: >-
+          Reused from the reported mCherry maturation half-time
+          of 47 min using k=ln(2)/(47/60 hours).
+          A literature-derived rate under that convention,
+          not a measurement in the team's imaging setup.
       a_Reporter:
         value: 50
         units: "MWDERIVEDUNIT_nanomole__liter__hour"

@@ -59,14 +59,14 @@ def test_provenance_is_recorded_per_parameter():
     """
     profile = params.load_profile("ox", "default")
 
-    assert profile.parameters["K_act_ox"].status == "fitted"
+    assert profile.parameters["K_act_ox"].status == "fit_summary"
     assert "Delaunay" in profile.parameters["K_act_ox"].source
-    assert profile.parameters["n_ox"].status == "fitted"
+    assert profile.parameters["n_ox"].status == "fit_summary"
 
     assert profile.parameters["k_off_ox"].status == "swept"
     assert profile.parameters["d_x_ox"].status == "swept"
 
-    assert profile.parameters["k_on_ox"].status == "non_identifiable"
+    assert profile.parameters["k_on_ox"].status == "model_convention"
 
     # Values without a recorded derivation say so rather than borrowing a
     # neighbouring parameter's citation.

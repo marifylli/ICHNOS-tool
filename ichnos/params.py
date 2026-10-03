@@ -31,8 +31,16 @@ from .config import model_path
 PARAMETERS_FILE = "parameters.yaml"
 
 #: Values that `status` may take. See parameters.yaml for what each means.
-VALID_STATUSES = ("fitted", "swept", "non_identifiable", "inherited", "measured")
-
+VALID_STATUSES = (
+    "fitted",
+    "fit_summary",
+    "swept",
+    "model_convention",
+    "literature_derived",
+    "non_identifiable",
+    "inherited",
+    "measured",
+)
 
 class ProfileError(ValueError):
     """The requested profile does not exist, or is not applicable as given."""
