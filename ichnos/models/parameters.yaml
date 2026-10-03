@@ -18,6 +18,7 @@
 # construction. tests/model/test_parameter_profiles.py asserts exactly that.
 #
 # Status values:
+#   literature_derived calculated or adopted from a stated literature source
 #   fit_summary       recorded summary of multiple fits, not one fit result
 #   model_convention  fixed modelling choice, not independently estimated
 #   fitted            estimated against named published data

@@ -28,6 +28,7 @@ from pathlib import Path
 from skimage.color import rgb2gray
 
 import pandas as pd
+from ichnos_image.instrument import SATURATION_VALUE
 
 from ichnos_image import ImageSet, process_experiment
 from ichnos_image.correct import calibrate_crosstalk_from_control
@@ -35,6 +36,7 @@ from ichnos_image.image_io import (
     EXTRACTION_METHODS,
     load_image,
     plane_for_channel,
+    saturation_mask_for_image,
 )
 
 def _load_bright_field(path: str | Path):
@@ -54,6 +56,7 @@ def _build_image_sets(
     *,
     green_extraction: str | None = None,
     red_extraction: str | None = None,
+    saturation_value: float = SATURATION_VALUE,
 ) -> list[ImageSet]:
     manifest = pd.read_csv(manifest_path)
     image_sets = []
@@ -65,6 +68,21 @@ def _build_image_sets(
             and pd.notna(row.bright_field_path)
             else None
         )
+
+        raw_green = load_image(row.green_path)
+        raw_red = load_image(row.red_path)
+
+        green_saturation = saturation_mask_for_image(
+            raw_green, saturation_value
+        )
+        red_saturation = saturation_mask_for_image(
+            raw_red, saturation_value
+        )
+
+        if green_saturation.shape != red_saturation.shape:
+            raise ValueError("green and red images must have matching shapes")
+
+        raw_saturation = green_saturation | red_saturation
 
         image_sets.append(
             ImageSet(
@@ -78,6 +96,8 @@ def _build_image_sets(
                     "red",
                     method=red_extraction,
                 ),
+                saturation_value=saturation_value,
+                raw_saturation_mask=raw_saturation,
                 bright_field=bright_field,
                 session_id=str(row.session_id),
                 timepoint=int(row.timepoint),
@@ -180,12 +200,22 @@ def main():
         default=None,
         help="Explicit RGB extraction for red samples and controls",
     )
+    parser.add_argument(
+        "--saturation-value",
+        type=float,
+        default=SATURATION_VALUE,
+        help=(
+            "Clipping threshold per stored component; "
+            "default comes from the instrument profile"
+        ),
+    )
     args = parser.parse_args()
 
     image_sets = _build_image_sets(
         args.manifest,
         green_extraction=args.green_extraction,
         red_extraction=args.red_extraction,
+        saturation_value=args.saturation_value,
     )
 
     sessions = {s.session_id for s in image_sets}

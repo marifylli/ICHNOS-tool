@@ -46,6 +46,7 @@ class ImageSet:
     lamp_warmup_minutes: float
     bright_field: np.ndarray | None = None  # None -> segment off the green channel instead
     saturation_value: float = 65535.0
+    raw_saturation_mask: np.ndarray | None = None
 
 
 def process_image_set(
@@ -112,6 +113,7 @@ def process_image_set(
     features = extract.extract_per_cell(
         labels, image_set.green, image_set.red, green_corr, red_corr,
         saturation_value=image_set.saturation_value,
+        raw_saturation_mask=image_set.raw_saturation_mask,
     )
 
     edge_ids = segment.border_touching_labels(labels)
