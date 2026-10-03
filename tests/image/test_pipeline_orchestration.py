@@ -4,7 +4,7 @@ image sets should produce one combined CSV covering every timepoint.
 import numpy as np
 import pandas as pd
 
-from ichnos_image import ImageSet, process_experiment
+from ichnos_image import CrosstalkCalibrationWarning, ImageSet, process_experiment
 from ichnos_image.synthesize import make_synthetic_pair
 
 
@@ -102,7 +102,11 @@ def test_scalar_bleed_across_multiple_sessions_warns(tmp_path):
 
     import pytest
 
-    with pytest.warns(UserWarning, match="per-session"):
+    # Asserting on the specific category keeps its negative counterpart
+    # (test_scalar_bleed_within_one_session_does_not_warn) meaningful: if the
+    # warning were ever dropped, this test fails rather than that one silently
+    # passing.
+    with pytest.warns(CrosstalkCalibrationWarning, match="per-session"):
         process_experiment(image_sets, tmp_path / "warned.csv", bleed_green_to_red=0.05)
 
 
@@ -122,9 +126,15 @@ def test_scalar_bleed_within_one_session_does_not_warn(tmp_path):
 
     import warnings
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
+    # Scoped to CrosstalkCalibrationWarning on purpose. simplefilter("error")
+    # would also turn unrelated third-party deprecations (e.g. scikit-image)
+    # into failures, which says nothing about this function's behaviour.
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
         process_experiment(image_sets, tmp_path / "not_warned.csv", bleed_green_to_red=0.05)
+
+    crosstalk_warnings = [w for w in caught if issubclass(w.category, CrosstalkCalibrationWarning)]
+    assert not crosstalk_warnings, [str(w.message) for w in crosstalk_warnings]
 
 
 def test_process_experiment_with_rolling_ball_background(tmp_path):

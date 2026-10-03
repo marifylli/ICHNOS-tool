@@ -7,6 +7,7 @@ are 16-bit (0-65535). A non-normalized variance-of-Laplacian would differ by
 depths, making a threshold calibrated on one meaningless on the other.
 """
 import numpy as np
+import pytest
 
 from ichnos_image import segment
 
@@ -27,7 +28,12 @@ def test_focus_score_invariant_to_bit_depth_rescaling():
     score_8bit = segment.focus_score(field * 255)  # simulated 8-bit (SC30) scale
     score_16bit = segment.focus_score(field * 65535)  # simulated 16-bit (public dataset) scale
 
-    assert score_8bit == score_16bit  # same relative content -> same score, regardless of scale
+    # Tolerant, not exact: the two paths differ only in floating-point
+    # rounding (the 8-bit and 16-bit arrays are not bit-identical multiples of
+    # each other), so bit-exact equality would be a statement about IEEE-754,
+    # not about scale invariance. Relative tolerance is far tighter than any
+    # real difference in image content would produce.
+    assert score_8bit == pytest.approx(score_16bit, rel=1e-12)
 
 
 def test_focus_score_still_separates_sharp_from_blurred_at_both_depths():

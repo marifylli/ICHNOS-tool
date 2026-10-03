@@ -18,6 +18,16 @@ from . import correct, export, extract, segment
 from .schema import CellRecord
 
 
+class CrosstalkCalibrationWarning(UserWarning):
+    """Raised when one scalar crosstalk coefficient is applied across several
+    imaging sessions. A subclass of UserWarning, so existing UserWarning
+    filters still catch it; having its own category lets a test assert on
+    *this* warning rather than on "any warning at all", which would otherwise
+    break on unrelated third-party deprecations.
+    """
+
+
+
 @dataclass
 class ImageSet:
     """One bright-field/DIC (optional) + GFP + mCherry image set to process."""
@@ -172,6 +182,7 @@ def process_experiment(
             "GFP-only control per imaging session), not shared across sessions. Pass a "
             "{session_id: bleed} dict from calibrate_crosstalk_from_control() per session unless "
             "this is deliberate (e.g. an illustrative demo).",
+            CrosstalkCalibrationWarning,
             stacklevel=2,
         )
 

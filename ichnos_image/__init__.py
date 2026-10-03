@@ -39,7 +39,12 @@ from .extract import extract_per_cell, compute_ratio, CellFeatures
 from .export import build_records, export_csv
 from .schema import CellRecord, CSV_COLUMNS
 from .synthesize import load_png16, save_png16, make_synthetic_pair, build_dataset
-from .pipeline import ImageSet, process_image_set, process_experiment
+from .pipeline import (
+    ImageSet,
+    process_image_set,
+    process_experiment,
+    CrosstalkCalibrationWarning,
+)
 from .metadata import read_tiff_metadata
 
 __all__ = [
