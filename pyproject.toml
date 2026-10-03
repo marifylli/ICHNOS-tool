@@ -33,7 +33,7 @@ packages = ["ichnos", "ichnos.models", "ichnos_image"]
 # The SBML sources ship inside the wheel and are reached with
 # importlib.resources, so an installed package carries its own models rather
 # than looking for a sibling checkout.
-"ichnos.models" = ["*.sbml", "*.json"]
+"ichnos.models" = ["*.sbml", "*.json", "*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

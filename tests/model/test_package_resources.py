@@ -29,6 +29,16 @@ def test_all_four_models_resolve():
         assert path.is_file()
         assert path.stat().st_size > 0
 
+@pytest.mark.parametrize("variant", ["ox", "er"])
+def test_packaged_default_profile_loads(variant):
+    from ichnos.params import load_profile
+
+    assert config.model_path("parameters.yaml").is_file()
+
+    profile = load_profile(variant, "default")
+    assert profile.variant == variant
+    assert profile.name == "default"
+    assert profile.parameters
 
 def test_missing_resource_raises_clearly():
     with pytest.raises(FileNotFoundError):

@@ -25,27 +25,59 @@ Usage:
 """
 import argparse
 from pathlib import Path
+from skimage.color import rgb2gray
 
 import pandas as pd
 
 from ichnos_image import ImageSet, process_experiment
 from ichnos_image.correct import calibrate_crosstalk_from_control
-from ichnos_image.image_io import load_image
+from ichnos_image.image_io import (
+    EXTRACTION_METHODS,
+    load_image,
+    plane_for_channel,
+)
 
+def _load_bright_field(path: str | Path):
+    """Convert bright-field images to a 2D segmentation plane."""
+    image = load_image(path)
 
-def _build_image_sets(manifest_path: Path) -> list[ImageSet]:
+    if image.ndim == 2:
+        return image
+
+    if image.ndim == 3 and image.shape[-1] in (3, 4):
+        return rgb2gray(image[..., :3])
+
+    raise ValueError(f"unsupported bright-field shape: {image.shape}")
+
+def _build_image_sets(
+    manifest_path: Path,
+    *,
+    green_extraction: str | None = None,
+    red_extraction: str | None = None,
+) -> list[ImageSet]:
     manifest = pd.read_csv(manifest_path)
     image_sets = []
+
     for row in manifest.itertuples():
         bright_field = (
-            load_image(row.bright_field_path)
-            if getattr(row, "bright_field_path", "") and pd.notna(row.bright_field_path)
+            _load_bright_field(row.bright_field_path)
+            if getattr(row, "bright_field_path", "")
+            and pd.notna(row.bright_field_path)
             else None
         )
+
         image_sets.append(
             ImageSet(
-                green=load_image(row.green_path),
-                red=load_image(row.red_path),
+                green=plane_for_channel(
+                    load_image(row.green_path),
+                    "green",
+                    method=green_extraction,
+                ),
+                red=plane_for_channel(
+                    load_image(row.red_path),
+                    "red",
+                    method=red_extraction,
+                ),
                 bright_field=bright_field,
                 session_id=str(row.session_id),
                 timepoint=int(row.timepoint),
@@ -59,16 +91,32 @@ def _build_image_sets(manifest_path: Path) -> list[ImageSet]:
                 lamp_warmup_minutes=float(row.lamp_warmup_minutes),
             )
         )
+
     return image_sets
 
 
-def _calibrate_bleed_per_session(controls_path: Path | None, sessions: set[str], bleed_default: float | None) -> dict:
+def _calibrate_bleed_per_session(
+    controls_path: Path | None,
+    sessions: set[str],
+    bleed_default: float | None,
+    *,
+    green_extraction: str | None = None,
+    red_extraction: str | None = None,
+) -> dict:
     bleed_by_session = {}
     if controls_path is not None:
         controls = pd.read_csv(controls_path)
         for row in controls.itertuples():
-            control_green = load_image(row.control_green_path)
-            control_red = load_image(row.control_red_path)
+            control_green = plane_for_channel(
+                load_image(row.control_green_path),
+                "green",
+                method=green_extraction,
+            )
+            control_red = plane_for_channel(
+                load_image(row.control_red_path),
+                "red",
+                method=red_extraction,
+            )
             calibration = calibrate_crosstalk_from_control(control_green, control_red)
             bleed_by_session[str(row.session_id)] = calibration["bleed_green_to_red"]
             print(
@@ -120,7 +168,35 @@ def main():
         "image set from its objective via ichnos.config.OBJECTIVE_PIXEL_SIZE_UM_REFERENCE "
         "(--background-method rolling_ball only)",
     )
+    parser.add_argument(
+        "--green-extraction",
+        choices=EXTRACTION_METHODS,
+        default=None,
+        help="Explicit RGB extraction for green samples and controls",
+    )
+    parser.add_argument(
+        "--red-extraction",
+        choices=EXTRACTION_METHODS,
+        default=None,
+        help="Explicit RGB extraction for red samples and controls",
+    )
     args = parser.parse_args()
+
+    image_sets = _build_image_sets(
+        args.manifest,
+        green_extraction=args.green_extraction,
+        red_extraction=args.red_extraction,
+    )
+
+    sessions = {s.session_id for s in image_sets}
+
+    bleed_by_session = _calibrate_bleed_per_session(
+        args.controls,
+        sessions,
+        args.bleed_default,
+        green_extraction=args.green_extraction,
+        red_extraction=args.red_extraction,
+    )
 
     image_sets = _build_image_sets(args.manifest)
     sessions = {s.session_id for s in image_sets}

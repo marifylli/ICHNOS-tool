@@ -57,11 +57,65 @@ def test_assignment_rule_observables_are_in_the_output(variant):
 
 @pytest.mark.parametrize("variant", VARIANTS)
 def test_solver_settings_travel_with_the_result(variant):
-    _, model, runner, names = _loaded(variant)
-    settings = sim.SolverSettings(absolute_tolerance=1e-9, relative_tolerance=1e-7)
-    with contextlib.redirect_stdout(io.StringIO()):
-        result = sim.simulate(runner, end=1, n_points=11, id_to_name=names, solver=settings)
-    assert result.solver.absolute_tolerance == 1e-9
+    _, _, runner, names = _loaded(variant)
+    settings = sim.SolverSettings(
+        absolute_tolerance=1e-9,
+        relative_tolerance=1e-7,
+        stiff=False,
+    )
+
+    result = sim.simulate(
+        runner,
+        end=1,
+        n_points=11,
+        id_to_name=names,
+        solver=settings,
+    )
+
+    integrator = runner.getIntegrator()
+    assert integrator.getValue("absolute_tolerance") == pytest.approx(
+        settings.absolute_tolerance
+    )
+    assert integrator.getValue("relative_tolerance") == pytest.approx(
+        settings.relative_tolerance
+    )
+    assert bool(integrator.getValue("stiff")) == settings.stiff
+    assert result.solver == settings
+
+
+@pytest.mark.parametrize("variant", VARIANTS)
+def test_load_model_applies_all_solver_settings(variant):
+    sbml, model, _, _ = _loaded(variant)
+    settings = sim.SolverSettings(
+        absolute_tolerance=1e-9,
+        relative_tolerance=1e-7,
+        stiff=False,
+    )
+
+    runner = sim.load_model(sbml, solver=settings, model=model)
+
+    assert sim.read_solver_settings(runner) == settings
+
+
+@pytest.mark.parametrize("variant", VARIANTS)
+def test_simulate_without_settings_preserves_runner_settings(variant):
+    sbml, model, _, names = _loaded(variant)
+    settings = sim.SolverSettings(
+        absolute_tolerance=1e-9,
+        relative_tolerance=1e-7,
+        stiff=False,
+    )
+    runner = sim.load_model(sbml, solver=settings, model=model)
+
+    result = sim.simulate(
+        runner,
+        end=1,
+        n_points=11,
+        id_to_name=names,
+    )
+
+    assert sim.read_solver_settings(runner) == settings
+    assert result.solver == settings
 
 
 def test_peak_summary_flags_an_undersampled_peak():

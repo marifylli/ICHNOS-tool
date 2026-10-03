@@ -35,6 +35,22 @@ class SolverSettings:
     relative_tolerance: float = DEFAULT_RELATIVE_TOLERANCE
     stiff: bool = True
 
+def apply_solver_settings(runner, settings: SolverSettings) -> None:
+    """Apply the requested settings to the active integrator."""
+    integrator = runner.getIntegrator()
+    integrator.setValue("absolute_tolerance", settings.absolute_tolerance)
+    integrator.setValue("relative_tolerance", settings.relative_tolerance)
+    integrator.setValue("stiff", settings.stiff)
+
+
+def read_solver_settings(runner) -> SolverSettings:
+    """Read the settings actually used by the active integrator."""
+    integrator = runner.getIntegrator()
+    return SolverSettings(
+        absolute_tolerance=float(integrator.getValue("absolute_tolerance")),
+        relative_tolerance=float(integrator.getValue("relative_tolerance")),
+        stiff=bool(integrator.getValue("stiff")),
+    )
 
 @dataclass
 class SimulationResult:
@@ -79,9 +95,9 @@ def load_model(
 
     solver = solver or SolverSettings()
     runner = te.loadSBMLModel(sbml_string)
-    integrator = runner.getIntegrator()
-    integrator.setValue("absolute_tolerance", solver.absolute_tolerance)
-    integrator.setValue("relative_tolerance", solver.relative_tolerance)
+
+    apply_solver_settings(runner, solver)
+
     if model is not None:
         select_observables(runner, model)
     return runner
@@ -144,14 +160,19 @@ def simulate(
     """
     if reset:
         runner.reset()
+
+    if solver is not None:
+        apply_solver_settings(runner, solver)
+
     raw = runner.simulate(start, end, n_points)
     columns = _readable_columns(raw.colnames, id_to_name or {})
     array = np.asarray(raw)
+
     return SimulationResult(
         time=array[:, 0],
         columns=columns[1:],
         values=array[:, 1:],
-        solver=solver or SolverSettings(),
+        solver=read_solver_settings(runner),
     )
 
 
