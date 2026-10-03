@@ -1,0 +1,383 @@
+# Parameter profiles for the ICHNOS merged model.
+#
+# A profile is a COMPLETE, EXECUTABLE configuration of one variant -- every
+# free parameter it needs, at once. Profiles are not grouped by where their
+# numbers came from, and values from different profiles are never mixed: a
+# profile is selected whole or not at all.
+#
+# IMPORTANT, and the reason every entry carries its own provenance: the
+# "default" profile below is NOT the result of one joint fit. It is the set
+# of values currently embedded in the source SBML, and those values reached
+# the model by different routes -- some fitted to a published figure, some
+# chosen by sweeping for a target shape, some simply inherited from the
+# submodel author without a recorded source. The set is internally consistent
+# in the sense that it runs and reproduces today's behaviour. It is not a
+# jointly identified parameter estimate, and no uncertainty on it is implied.
+#
+# Generated from the merged model, so applying "default" is a no-op by
+# construction. tests/model/test_parameter_profiles.py asserts exactly that.
+#
+# Status values:
+#   fitted            estimated against named published data
+#   swept             chosen by scanning for a target behaviour, not fitted
+#   non_identifiable  not determined by the data on its own
+#   inherited         carried over from the source SBML with no recorded
+#                     derivation; NOT a claim that the value is arbitrary,
+#                     only that this repository cannot cite its origin
+#
+# Rule-governed quantities are listed separately under `governed:` for each
+# variant and MUST NOT be set by a profile. P in particular is an
+# assignment-rule parameter: the builder wires the reporter onto the dynamic
+# P from TIP-TetR and sets aside the reporter's own static P = 0.5. Turning P
+# into a constant would silently change the circuit.
+
+schema_version: 1
+
+
+ox:
+  default:
+    description: "values embedded in the source SBML at Ichnos_PULSE e66de65c; reproduces current behaviour exactly"
+    joint_fit: false
+    parameters:
+      b:
+        value: 4
+        units: "MWDERIVEDUNIT_1__nanomole__liter__hour"
+        status: inherited
+        source: null
+      delta_w:
+        value: 0.12
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      a_TetR:
+        value: 50
+        units: "MWDERIVEDUNIT_nanomole__liter__hour"
+        status: inherited
+        source: null
+      k_deg_TetR:
+        value: 0.12
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      K_R:
+        value: 0.44
+        units: "MWDERIVEDUNIT_nanomole__liter"
+        status: inherited
+        source: null
+      n:
+        value: 4
+        units: "dimensionless"
+        status: inherited
+        source: null
+      P_min:
+        value: 0.0056
+        units: "dimensionless"
+        status: inherited
+        source: null
+      mu:
+        value: 0.35
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      Kd_TIP_TetR:
+        value: 0.25
+        units: "MWDERIVEDUNIT_nanomole__liter"
+        status: inherited
+        source: null
+      S_ox:
+        value: 400
+        units: "MWBUILTINPREFIX_micro_MWBUILTINUNIT_molarity"
+        status: inherited
+        source: null
+        note: "constant: there is no clearance rate rule, so stress never decays"
+      K_act_ox:
+        value: 208
+        units: "MWBUILTINPREFIX_micro_MWBUILTINUNIT_molarity"
+        status: fitted
+        source: "Delaunay et al. 2000 EMBO J, Fig. 2C; Python densitometry + fminsearch"
+      n_ox:
+        value: 2.75
+        units: "dimensionless"
+        status: fitted
+        source: "Delaunay et al. 2000 EMBO J, Fig. 2C; Python densitometry + fminsearch"
+      beta_basal_ox:
+        value: 5
+        units: "MWDERIVEDUNIT_nanomole__liter__hour"
+        status: inherited
+        source: null
+        note: "beta_max_ox/beta_basal_ox = 23.6; corrected from 5 after a source-mixing error"
+      beta_max_ox:
+        value: 118
+        units: "MWDERIVEDUNIT_nanomole__liter__hour"
+        status: inherited
+        source: null
+        note: "beta_max_ox/beta_basal_ox = 23.6; corrected from 5 after a source-mixing error"
+      k_deg_TIP:
+        value: 1
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+        note: "shared across variants (same TIP coding sequence); cross-variant equality is checked"
+      k_on_ox:
+        value: 50
+        units: "MWDERIVEDUNIT_1__hour"
+        status: non_identifiable
+        source: "non-identifiable with k_off_ox at steady state; only the ratio is constrained"
+      k_off_ox:
+        value: 160
+        units: "MWDERIVEDUNIT_1__hour"
+        status: swept
+        source: "parameter sweep against Delaunay et al. 2000 Fig. 2B shape"
+      k_x_ox:
+        value: 1
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      d_x_ox:
+        value: 0.5
+        units: "MWDERIVEDUNIT_1__hour"
+        status: swept
+        source: "parameter sweep against Delaunay et al. 2000 Fig. 2B shape"
+      a_Reporter:
+        value: 50
+        units: "MWDERIVEDUNIT_nanomole__liter__hour"
+        status: inherited
+        source: null
+      m:
+        value: 7.39
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      m1:
+        value: 2.46
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      m2:
+        value: 1.37
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      k_deg_Reporter:
+        value: 0.01
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      E:
+        value: 0.173
+        units: "dimensionless"
+        status: inherited
+        source: null
+      f:
+        value: 1
+        units: "dimensionless"
+        status: inherited
+        source: null
+        note: "FRET/instrument scale on Measured_Ratio_RG; recovering Red from the ratio needs f, not ratio*Green"
+      eps:
+        value: 1e-09
+        units: "MWDERIVEDUNIT_nanomole__liter"
+        status: inherited
+        source: null
+    governed:
+      # Set by rules or initial assignments in the model. A profile that
+      # tried to assign these would be overwritten at runtime, or would
+      # change the circuit structure.
+      P: assignmentRule
+      u_w: assignmentRule
+      A_ox: rateRule
+      X_ox: rateRule
+      Total_red_pool: assignmentRule
+      b_fret: assignmentRule
+      Observed_Green: assignmentRule
+      Ratio_RG_FRET: assignmentRule
+      Measured_Ratio_RG: assignmentRule
+    initial_state:
+      # Every state starts at zero in the source SBML. A run from these
+      # initial conditions is an artifact, not a biological baseline --
+      # pre-equilibrate at zero stress first (see ichnos/protocol.py).
+      TetR_active: 0.0
+      TIP: 0.0
+      TetR_TIP_complex: 0.0
+      Reporter_dark_green: 0.0
+      Reporter_green: 0.0
+      Reporter_dark_red: 0.0
+      Reporter_intermediate: 0.0
+      Reporter_red: 0.0
+
+er:
+  default:
+    description: "values embedded in the source SBML at Ichnos_PULSE e66de65c; reproduces current behaviour exactly"
+    joint_fit: false
+    parameters:
+      b:
+        value: 4
+        units: "MWDERIVEDUNIT_1__nanomole__liter__hour"
+        status: inherited
+        source: null
+      delta_w:
+        value: 0.12
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      a_TetR:
+        value: 50
+        units: "MWDERIVEDUNIT_nanomole__liter__hour"
+        status: inherited
+        source: null
+      k_deg_TetR:
+        value: 0.12
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      K_R:
+        value: 0.44
+        units: "MWDERIVEDUNIT_nanomole__liter"
+        status: inherited
+        source: null
+      n:
+        value: 4
+        units: "dimensionless"
+        status: inherited
+        source: null
+      P_min:
+        value: 0.0056
+        units: "dimensionless"
+        status: inherited
+        source: null
+      mu:
+        value: 0.35
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      Kd_TIP_TetR:
+        value: 0.25
+        units: "MWDERIVEDUNIT_nanomole__liter"
+        status: inherited
+        source: null
+      S_er:
+        value: 100
+        units: "MWBUILTINPREFIX_micro_MWBUILTINUNIT_molarity"
+        status: inherited
+        source: null
+        note: "constant: there is no clearance rate rule, so stress never decays"
+      K_act_er:
+        value: 2345.3
+        units: "MWBUILTINPREFIX_micro_MWBUILTINUNIT_molarity"
+        status: inherited
+        source: null
+      n_er:
+        value: 3.97
+        units: "dimensionless"
+        status: inherited
+        source: null
+      beta_basal_er:
+        value: 0.77
+        units: "MWDERIVEDUNIT_nanomole__liter__hour"
+        status: inherited
+        source: null
+      beta_max_er:
+        value: 25
+        units: "MWDERIVEDUNIT_nanomole__liter__hour"
+        status: inherited
+        source: null
+      k_deg_TIP:
+        value: 1
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+        note: "shared across variants (same TIP coding sequence); cross-variant equality is checked"
+      k_on_er:
+        value: 7.2
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      k_off_er:
+        value: 11.09
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      k_x_er:
+        value: 1
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      d_x_er:
+        value: 0
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+        note: "0 makes the ER sensor a perfect adaptor, so its readout pulses; the ox sensor at 0.5 does not"
+      k_mat_er:
+        value: 0.884868741140356
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      a_Reporter:
+        value: 50
+        units: "MWDERIVEDUNIT_nanomole__liter__hour"
+        status: inherited
+        source: null
+      m:
+        value: 7.39
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      m1:
+        value: 2.46
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      m2:
+        value: 1.37
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      k_deg_Reporter:
+        value: 0.01
+        units: "MWDERIVEDUNIT_1__hour"
+        status: inherited
+        source: null
+      E:
+        value: 0.173
+        units: "dimensionless"
+        status: inherited
+        source: null
+      f:
+        value: 1
+        units: "dimensionless"
+        status: inherited
+        source: null
+        note: "FRET/instrument scale on Measured_Ratio_RG; recovering Red from the ratio needs f, not ratio*Green"
+      eps:
+        value: 1e-09
+        units: "MWDERIVEDUNIT_nanomole__liter"
+        status: inherited
+        source: null
+    governed:
+      # Set by rules or initial assignments in the model. A profile that
+      # tried to assign these would be overwritten at runtime, or would
+      # change the circuit structure.
+      P: assignmentRule
+      u_w: assignmentRule
+      A_er: rateRule
+      X_er: rateRule
+      Total_red_pool: assignmentRule
+      b_fret: assignmentRule
+      Observed_Green: assignmentRule
+      Ratio_RG_FRET: assignmentRule
+      Measured_Ratio_RG: assignmentRule
+    initial_state:
+      # Every state starts at zero in the source SBML. A run from these
+      # initial conditions is an artifact, not a biological baseline --
+      # pre-equilibrate at zero stress first (see ichnos/protocol.py).
+      TetR_active: 0.0
+      TIP: 0.0
+      TetR_TIP_complex: 0.0
+      A_er: 0.0
+      X_er: 0.0
+      Reporter_dark_green: 0.0
+      Reporter_green: 0.0
+      Reporter_dark_red: 0.0
+      Reporter_intermediate: 0.0
+      Reporter_red: 0.0

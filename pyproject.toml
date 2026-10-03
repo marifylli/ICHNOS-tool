@@ -23,7 +23,7 @@ cellpose = ["cellpose", "torch"]
 # dropping to libroadrunner alone: the migrated builder and simulator run
 # exactly as they do in Ichnos_PULSE, so the migration changes no behaviour.
 # Swapping the solver entry point is its own change, in its own step.
-model = ["python-libsbml", "tellurium"]
+model = ["python-libsbml", "tellurium", "PyYAML"]
 dev = ["pytest"]
 
 [tool.setuptools]

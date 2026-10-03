@@ -23,6 +23,39 @@ Things this repository does **not** do, and claims it must not make.
 - `integrated_green` is a sum of pixel intensities, not a reporter
   concentration. The mapping to model observables is unresolved.
 
+## Found in Step 4
+
+**Assignment-rule observables are absent from a default simulation.**
+RoadRunner's default selections are floating species and rate-rule states.
+`Observed_Green`, `Measured_Ratio_RG`, `Ratio_RG_FRET`, `Total_red_pool` and
+`b_fret` are assignment-rule parameters -- between them the entire measured
+readout of this circuit -- and do not appear in the output of a plain
+`simulate()`. Code looking for them finds nothing. `ichnos.simulate.load_model`
+now widens the selections when given the model.
+
+**The default `S_er` is effectively zero stress.** The ER sensing module ships
+with `S_er = 100 µM` against `K_act_er = 2345.3 µM`, `n_er = 3.97`. Measured at
+12 h after onset:
+
+| `S_er` (µM) | `Observed_Green` |
+| --- | --- |
+| 0 | 2.3570 |
+| 100 (default) | 2.3626 |
+| 500 | 2.6000 |
+| 1000 | 3.2200 |
+| 2345 | 5.5234 |
+| 5000 | 6.6161 |
+| 10000 | 6.7040 |
+
+The default dose moves the readout by 0.24% against no stress at all. Any ER
+run at the shipped default is a near-baseline run. Calibration must span a
+dose range around `K_act_er`, not around the default.
+
+**The oxidative transient is fast.** `A_ox` peaks at 0.8627 about 4 minutes
+after onset and settles to 0.3052. A 200 h run over 500 points samples every
+0.4 h and misses it entirely. `simulate.peak_summary()` returns an
+`undersampled` flag rather than printing a warning.
+
 ## Corrected in Step 2
 
 The migrated pipeline described an Olympus **SC30** camera. That is not this
