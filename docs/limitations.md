@@ -25,6 +25,33 @@ Things this repository does **not** do, and claims it must not make.
 - `integrated_green` is a sum of pixel intensities, not a reporter
   concentration. The mapping to model observables is unresolved.
 
+## Open decision found during Step 1
+
+`segment.segment_cells()` calls
+`morphology.remove_small_objects(binary, min_size=min_size)`. In
+scikit-image 0.26 `min_size` is deprecated in favour of `max_size`, and the
+boundary semantics changed with it:
+
+| version | `min_size=N` removes |
+| --- | --- |
+| < 0.26 | objects strictly smaller than N (an N-pixel object is **kept**) |
+| 0.26 | objects of N pixels or fewer (an N-pixel object is **dropped**) |
+
+Verified on 0.26: a single 5-pixel object is removed by both `min_size=5` and
+`max_size=5`, and kept by `max_size=4`.
+
+So the segmentation already changed by one pixel of threshold when
+scikit-image was upgraded, silently. The call has deliberately **not** been
+migrated yet, because the two possible replacements are not equivalent:
+
+- `max_size=min_size` preserves today's (0.26) behaviour;
+- `max_size=min_size - 1` preserves the original intent of the `min_size`
+  argument ("keep objects of at least this size").
+
+This needs a decision, a pinned scikit-image version, and a regression test
+on a fixed scene before it is changed. Until then the deprecation warning is
+left in place as the visible reminder.
+
 ## Licensing
 
 `ICHNOS-ablation` is MIT. `DryLabTool`, `Ichnos_PULSE` and `ichnos-fisher`
