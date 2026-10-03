@@ -8,6 +8,8 @@ import libsbml
 import pytest
 
 from ichnos import build, params
+from dataclasses import replace
+
 
 
 VARIANTS = ("ox", "er")
@@ -130,3 +132,71 @@ def test_initial_state_is_all_zero(variant):
     profile = params.load_profile(variant, "default")
     assert profile.initial_state
     assert all(value == 0 for value in profile.initial_state.values())
+
+def _changed_profile(profile, name, **changes):
+    entries = dict(profile.parameters)
+    entries[name] = replace(entries[name], **changes)
+    return replace(profile, parameters=entries)
+
+
+@pytest.mark.parametrize(
+    "name, value",
+    [
+        ("S_ox", -1),
+        ("S_ox", float("nan")),
+        ("S_ox", float("inf")),
+        ("S_ox", True),
+        ("S_ox", "invalid"),
+        ("K_act_ox", 0),
+        ("n_ox", 0),
+        ("eps", 0),
+        ("f", 0),
+        ("E", 1.1),
+        ("P_min", 1.1),
+    ],
+)
+def test_invalid_parameter_values_are_rejected(name, value):
+    profile = params.load_profile("ox")
+
+    with pytest.raises(params.InvalidParameterValueError):
+        _changed_profile(profile, name, value=value)
+
+
+@pytest.mark.parametrize("variant", VARIANTS)
+@pytest.mark.parametrize("check", [True, False])
+def test_invalid_units_do_not_partially_modify_model(variant, check):
+    _, model = _model(variant)
+    profile = params.load_profile(variant)
+
+    # An earlier valid change must not be written if a later entry fails.
+    profile = _changed_profile(profile, "b", value=8)
+    profile = _changed_profile(
+        profile, "eps", units="dimensionless"
+    )
+
+    before = libsbml.writeSBMLToString(model.getSBMLDocument())
+
+    with pytest.raises(params.UnitMismatchError):
+        params.apply_profile(model, profile, check=check)
+
+    after = libsbml.writeSBMLToString(model.getSBMLDocument())
+    assert after == before
+
+
+@pytest.mark.parametrize("units", [None, "", " "])
+def test_unspecified_profile_units_are_rejected(units):
+    profile = params.load_profile("ox")
+
+    with pytest.raises(params.UnitMismatchError):
+        _changed_profile(profile, "K_act_ox", units=units)
+
+
+def test_zero_stress_is_allowed():
+    _, model = _model("ox")
+    profile = _changed_profile(
+        params.load_profile("ox"),
+        "S_ox",
+        value=0,
+    )
+
+    params.apply_profile(model, profile)
