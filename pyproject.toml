@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ichnos-tool"
+version = "0.1.0"
+description = "ICHNOS: fluorescence images to stress dose and time-since-onset estimates"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "scipy",
+    "pandas",
+]
+
+[project.optional-dependencies]
+# Image analysis (ichnos_image). Separate from the base install so that a
+# model/decoder-only user does not pull scikit-image.
+image = ["scikit-image", "pillow", "tifffile"]
+# Optional deep-learning segmentation backend.
+cellpose = ["cellpose", "torch"]
+# Added in Step 3, when the SBML builder and simulator are migrated:
+#   model = ["python-libsbml", "libroadrunner", "PyYAML"]
+dev = ["pytest"]
+
+[tool.setuptools]
+packages = ["ichnos", "ichnos_image"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

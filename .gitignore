@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.DS_Store
+
+# User data, results and calibration artifacts are never committed.
+work/
+results/
+artifacts/
+*.csv
+!examples/*.csv
+!tests/fixtures/**/*.csv

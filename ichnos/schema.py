@@ -1,0 +1,70 @@
+"""Per-cell CSV schema for the ICHNOS pipeline's final dataset (Stage 8).
+
+The one definition of CellRecord -- ichnos_image.export builds these and
+writes them to CSV; anything else that reads that CSV (a future Stage 6
+ratio/decoder package, analysis notebooks) should treat this as the schema,
+not re-derive it from the CSV's header.
+
+Field list reflects the current (Olympus, no ApoTome) plan: no
+grid_setting/section_thickness, per-session instrument metadata instead
+(session_id, exposure/ND per channel, burner_hours, lamp_warmup_minutes,
+acquisition_order), plus the QC flags from Stage 7 (focus_score, sat_flag,
+edge_flag, registration_shift_px, lamp_flag).
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, fields
+from typing import Optional
+
+
+@dataclass
+class CellRecord:
+    # identity
+    session_id: str
+    timepoint: int
+    cell_id: int
+
+    # segmentation-derived
+    area_px: int
+    edge_flag: bool
+
+    # raw per-channel intensities (pre-correction)
+    raw_mean_green: float
+    raw_mean_red: float
+
+    # corrected per-channel intensities (background + flat-field + crosstalk + photobleaching)
+    corrected_mean_green: float
+    corrected_mean_red: float
+    integrated_green: float
+    integrated_red: float
+
+    # derived
+    ratio_red_green: Optional[float]
+
+    # QC (Stage 7)
+    sat_flag: bool
+    focus_score: float
+    registration_shift_px: float
+    lamp_flag: bool
+    qc_pass: bool
+
+    # acquisition / instrument metadata (per session, repeated per row for convenience)
+    exposure_ms_green: float
+    exposure_ms_red: float
+    nd_filter_green: float
+    nd_filter_red: float
+    objective: str
+    burner_hours: float
+    lamp_warmup_minutes: float
+    acquisition_order: int
+
+
+CSV_COLUMNS = [f.name for f in fields(CellRecord)]
+
+
+def validate(record: CellRecord) -> None:
+    """Cheap structural sanity checks; not a substitute for Stage 7 QC itself."""
+    if record.area_px <= 0:
+        raise ValueError(f"cell {record.cell_id}: non-positive area_px")
+    if record.raw_mean_green < 0 or record.raw_mean_red < 0:
+        raise ValueError(f"cell {record.cell_id}: negative raw intensity")
