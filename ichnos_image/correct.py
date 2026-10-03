@@ -11,38 +11,32 @@ from skimage.registration import phase_cross_correlation
 
 from ichnos.config import (
     BACKGROUND_MODE_SANITY_PERCENTILE,
-    CAMERA_SC30_SENSOR_PIXEL_SIZE_UM,
-    OBJECTIVE_PIXEL_SIZE_UM_REFERENCE,
     YEAST_CELL_DIAMETER_UM,
 )
+
+from . import instrument
 
 
 def pixel_size_at_sample_um(
     objective_magnification: float,
-    camera_adapter_magnification: float = 1.0,
-    sensor_pixel_size_um: float = CAMERA_SC30_SENSOR_PIXEL_SIZE_UM,
+    camera_adapter_magnification: float = instrument.CAMERA_ADAPTER_MAGNIFICATION,
+    sensor_pixel_size_um: float = instrument.CAMERA.sensor_pixel_size_um,
     binning_factor: int = 1,
 ) -> float:
     """Real µm/pixel at the sample, from the camera sensor's own pixel size
-    and the optical magnification in front of it -- straight from the SC30
-    manual's formula: pixel_size_um = sensor_pixel_size_um / (objective_mag *
-    adapter_mag).
+    and the optical magnification in front of it:
+    sensor_pixel_size_um * binning / (objective_mag * adapter_mag).
 
-    Defaults to the SC30's sensor pixel size (3.2um), the team's real
-    camera. camera_adapter_magnification should be one of
-    ichnos.config.KNOWN_CAMERA_ADAPTER_MAGNIFICATIONS (0.25-1.0, per the
-    CKX41/Camera Adapter System manuals) once the team confirms which C-mount
-    adapter they actually use -- printed on the adapter barrel itself.
-    binning_factor (1/2/3/4, see ichnos.config.CAMERA_SC30_BINNING_MODES)
-    scales the effective sensor pixel size: at Nx binning, N physical pixels
-    combine into one, so it's N times larger (and resolution/exposure change
-    accordingly -- see that dict).
+    Defaults describe the team's confirmed setup -- a QImaging MicroPublisher
+    3.3 RTV (3.45 µm sensor pixel) behind an Olympus U-TV0.5XC-3 0.5X
+    adapter. Pass explicit values for a different rig; for one of this
+    microscope's own objectives, prefer instrument.pixel_size_um(), which
+    looks the magnification up rather than taking it on trust.
 
-    This is the number to feed into suggest_rolling_ball_radius() or a new
-    OBJECTIVE_PIXEL_SIZE_UM_REFERENCE entry once the team confirms objective
-    + adapter + binning mode -- OBJECTIVE_PIXEL_SIZE_UM_REFERENCE currently
-    holds unrelated placeholder values from the public YRC dataset's
-    (different) camera, not this one.
+    binning_factor scales the effective sensor pixel size: at Nx binning, N
+    physical pixels combine into one, so it is N times larger. Fluorescence
+    capture runs at 1x1 on this setup; the 2x2 seen in the acquisition
+    software is the live preview.
     """
     effective_sensor_pixel_size_um = sensor_pixel_size_um * binning_factor
     return effective_sensor_pixel_size_um / (objective_magnification * camera_adapter_magnification)
@@ -72,26 +66,17 @@ def suggest_rolling_ball_radius(
     return cell_radius_px * safety_factor
 
 
-def rolling_ball_radius_for_objective(objective: str, **kwargs) -> float:
-    """suggest_rolling_ball_radius(), looked up by objective name against
-    ichnos.config.OBJECTIVE_PIXEL_SIZE_UM_REFERENCE (case-insensitive, e.g.
-    "60x" and "60X" both match -- objective naming isn't consistently
-    cased across manifests/microscope software).
+def rolling_ball_radius_for_objective(objective: str, binning: int = 1, **kwargs) -> float:
+    """suggest_rolling_ball_radius() for one of this microscope's objectives,
+    looked up by name (case-insensitive -- objective naming is not
+    consistently cased across manifests and microscope software).
 
-    Those reference pixel sizes come from the public YRC dataset (a
-    different microscope), not the team's Olympus -- this exists so the
-    mechanism (objective -> radius) is ready to wire in real Olympus values
-    the moment they're known, not as a source of real Olympus numbers today.
+    The pixel size is derived from the confirmed camera, adapter and the
+    objective's own magnification, not read from a table of measurements
+    taken on some other microscope. See ichnos_image/instrument.py.
     """
-    normalized = {key.upper(): value for key, value in OBJECTIVE_PIXEL_SIZE_UM_REFERENCE.items()}
-    pixel_size_um = normalized.get(objective.upper())
-    if pixel_size_um is None:
-        raise KeyError(
-            f"no pixel size on record for objective {objective!r}; add it to "
-            "ichnos.config.OBJECTIVE_PIXEL_SIZE_UM_REFERENCE, or call "
-            "suggest_rolling_ball_radius(pixel_size_um=...) directly"
-        )
-    return suggest_rolling_ball_radius(pixel_size_um, **kwargs)
+    pixel_size = instrument.pixel_size_um(objective, binning=binning)
+    return suggest_rolling_ball_radius(pixel_size, **kwargs)
 
 
 def subtract_background(

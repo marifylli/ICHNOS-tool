@@ -38,7 +38,17 @@ from .correct import (
 from .extract import extract_per_cell, compute_ratio, CellFeatures
 from .export import build_records, export_csv
 from .schema import CellRecord, CSV_COLUMNS
-from .synthesize import load_png16, save_png16, make_synthetic_pair, build_dataset
+from .image_io import (
+    load_image,
+    load_png16,
+    save_png16,
+    extract_fluorescence_plane,
+    plane_for_channel,
+    saturation_value_for_file,
+    UncalibratedExtractionError,
+)
+from .synthesize import make_synthetic_pair, build_dataset
+from . import instrument
 from .pipeline import (
     ImageSet,
     process_image_set,

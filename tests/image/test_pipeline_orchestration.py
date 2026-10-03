@@ -150,7 +150,7 @@ def test_process_experiment_with_rolling_ball_background(tmp_path):
             green=green, red=red, bright_field=bf,
             session_id="session-1", timepoint=0, acquisition_order=0,
             exposure_ms_green=800.0, exposure_ms_red=2000.0,
-            nd_filter_green=0.0, nd_filter_red=0.0, objective="100X",
+            nd_filter_green=0.0, nd_filter_red=0.0, objective="40X",
             burner_hours=5.0, lamp_warmup_minutes=30.0,
         )
     ]
@@ -169,7 +169,7 @@ def test_process_experiment_rolling_ball_unknown_objective_raises(tmp_path):
             green=green, red=red, bright_field=bf,
             session_id="session-1", timepoint=0, acquisition_order=0,
             exposure_ms_green=800.0, exposure_ms_red=2000.0,
-            nd_filter_green=0.0, nd_filter_red=0.0, objective="40X",  # not in the reference table
+            nd_filter_green=0.0, nd_filter_red=0.0, objective="100X",  # not on this microscope
             burner_hours=5.0, lamp_warmup_minutes=30.0,
         )
     ]

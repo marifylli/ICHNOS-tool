@@ -22,17 +22,14 @@ import csv
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
 from scipy import ndimage as ndi
 from skimage.filters import threshold_otsu
 
 
-def load_png16(path: str | Path) -> np.ndarray:
-    return np.array(Image.open(path)).astype(np.float64)
-
-
-def save_png16(array: np.ndarray, path: str | Path) -> None:
-    Image.fromarray(np.clip(array, 0, 65535).astype(np.uint16)).save(path)
+# Moved to image_io.py: the runtime pipeline must not import its loader from
+# this synthetic-data module. Re-exported here so existing callers keep
+# working while they are migrated.
+from .image_io import load_png16, save_png16  # noqa: F401
 
 
 def _label_cells_from_green(green: np.ndarray, min_size: int = 20) -> np.ndarray:

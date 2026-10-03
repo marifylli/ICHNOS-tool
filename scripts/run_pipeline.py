@@ -3,7 +3,7 @@ correct -> extract -> export) over an arbitrary experiment described by a
 manifest CSV, and a per-session crosstalk-control manifest, producing one
 combined CSV.
 
-Image files are read with PIL (ichnos_image.synthesize.load_png16 despite
+Image files are read with PIL (ichnos_image.image_io.load_image despite
 its name -- Image.open handles PNG, TIFF, and most other common formats;
 raw microscope formats like .czi/.nd2 would need a dedicated reader, e.g.
 Bio-Formats via python-bioformats, not included here).
@@ -30,7 +30,7 @@ import pandas as pd
 
 from ichnos_image import ImageSet, process_experiment
 from ichnos_image.correct import calibrate_crosstalk_from_control
-from ichnos_image.synthesize import load_png16
+from ichnos_image.image_io import load_image
 
 
 def _build_image_sets(manifest_path: Path) -> list[ImageSet]:
@@ -38,14 +38,14 @@ def _build_image_sets(manifest_path: Path) -> list[ImageSet]:
     image_sets = []
     for row in manifest.itertuples():
         bright_field = (
-            load_png16(row.bright_field_path)
+            load_image(row.bright_field_path)
             if getattr(row, "bright_field_path", "") and pd.notna(row.bright_field_path)
             else None
         )
         image_sets.append(
             ImageSet(
-                green=load_png16(row.green_path),
-                red=load_png16(row.red_path),
+                green=load_image(row.green_path),
+                red=load_image(row.red_path),
                 bright_field=bright_field,
                 session_id=str(row.session_id),
                 timepoint=int(row.timepoint),
@@ -67,8 +67,8 @@ def _calibrate_bleed_per_session(controls_path: Path | None, sessions: set[str],
     if controls_path is not None:
         controls = pd.read_csv(controls_path)
         for row in controls.itertuples():
-            control_green = load_png16(row.control_green_path)
-            control_red = load_png16(row.control_red_path)
+            control_green = load_image(row.control_green_path)
+            control_red = load_image(row.control_red_path)
             calibration = calibrate_crosstalk_from_control(control_green, control_red)
             bleed_by_session[str(row.session_id)] = calibration["bleed_green_to_red"]
             print(

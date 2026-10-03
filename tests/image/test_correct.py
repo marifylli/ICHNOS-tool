@@ -2,6 +2,7 @@
 a stack of images with different, randomly-placed cell content.
 """
 import numpy as np
+import pytest
 
 from ichnos_image import correct
 
@@ -130,20 +131,26 @@ def test_suggest_rolling_ball_radius_scales_with_pixel_size():
     assert radius_60x > radius_100x > 0
 
 
-def test_rolling_ball_radius_for_objective_uses_config_lookup():
-    from ichnos.config import OBJECTIVE_PIXEL_SIZE_UM_REFERENCE
+def test_rolling_ball_radius_for_objective_uses_instrument_profile():
+    from ichnos_image import instrument
 
-    radius = correct.rolling_ball_radius_for_objective("100X")
-    expected = correct.suggest_rolling_ball_radius(OBJECTIVE_PIXEL_SIZE_UM_REFERENCE["100X"])
+    radius = correct.rolling_ball_radius_for_objective("40X")
+    expected = correct.suggest_rolling_ball_radius(instrument.pixel_size_um("40X"))
     assert radius == expected
 
     # case-insensitive: manifests/microscope software aren't consistently cased
-    assert correct.rolling_ball_radius_for_objective("100x") == expected
+    assert correct.rolling_ball_radius_for_objective("40x") == expected
 
     import pytest
 
     with pytest.raises(KeyError):
         correct.rolling_ball_radius_for_objective("unknown-objective")
+
+    # 100X is a plausible-looking objective that this microscope does not
+    # have. It must raise rather than quietly produce a radius -- the old
+    # lookup table did have a 100X entry, borrowed from an unrelated dataset.
+    with pytest.raises(KeyError):
+        correct.rolling_ball_radius_for_objective("100X")
 
 
 def test_undersized_rolling_ball_radius_eats_cell_signal():
@@ -182,15 +189,24 @@ def test_undersized_rolling_ball_radius_eats_cell_signal():
     assert signal_suggested > signal_large * 0.95  # suggested radius is already near the plateau
 
 
-def test_pixel_size_at_sample_um_matches_sc30_manual_formula():
-    # SC30 manual: pixel_size_um = sensor_pixel_size_um / (objective_mag * adapter_mag)
+def test_pixel_size_at_sample_um_matches_the_formula():
+    # pixel_size_um = sensor_pixel_size_um / (objective_mag * adapter_mag)
     assert correct.pixel_size_at_sample_um(60, 1.0, sensor_pixel_size_um=3.2) == 3.2 / 60
     assert correct.pixel_size_at_sample_um(100, 0.5, sensor_pixel_size_um=3.2) == 3.2 / 50
 
-    # defaults to the SC30's own sensor pixel size
-    from ichnos.config import CAMERA_SC30_SENSOR_PIXEL_SIZE_UM
 
-    assert correct.pixel_size_at_sample_um(40) == CAMERA_SC30_SENSOR_PIXEL_SIZE_UM / 40
+def test_pixel_size_at_sample_um_defaults_to_the_real_rig():
+    """Defaults must describe the confirmed setup -- QImaging 3.45 µm sensor
+    pixel behind the 0.5X U-TV0.5XC-3 adapter -- not a camera this lab does
+    not own. A wrong default here is a wrong spatial scale everywhere
+    downstream, silently.
+    """
+    from ichnos_image import instrument
+
+    assert correct.pixel_size_at_sample_um(40) == pytest.approx(0.1725)
+    assert correct.pixel_size_at_sample_um(40) == pytest.approx(
+        instrument.pixel_size_um("40X")
+    )
 
 
 def test_pixel_size_at_sample_um_scales_with_binning():
