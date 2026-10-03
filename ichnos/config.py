@@ -1,61 +1,86 @@
-"""Calibrated QC constants for the image pipeline, with their provenance, in
-one place instead of scattered as literals inside function signatures.
+"""Model configuration: which SBML files make up each variant, and the rules
+the merge has to respect.
 
-Hardware description -- camera, objectives, filter cubes, lamp, acquisition
-preset -- is NOT here. It lives in ichnos_image/instrument.py, which
-describes one specific microscope. This module holds thresholds that are
-properties of the analysis, not of the instrument.
+Migrated from Ichnos_PULSE python/ichnos_config.py @ e66de65c. The merge
+rules and the calibration-only exclusion are preserved exactly; what changed
+is how the SBML files are located. They are packaged resources inside
+ichnos/models/ now, reached through importlib.resources, rather than paths
+pointing at a sibling clone's integration/ directory. A wheel installed into
+a clean environment therefore carries its own models.
 
-Everything here was measured, not guessed -- see each constant's comment for
-the script that derived it and its caveats (sample size, what it assumes).
-Re-run the cited script and update the constant (and this comment) if the
-underlying assumptions change -- e.g. once real wet-lab images replace the
-public reference dataset these were calibrated on.
+This module previously held the image pipeline's QC thresholds. Those moved
+to ichnos_image/instrument.py, so that model configuration and instrument
+configuration cannot collide.
 """
 from __future__ import annotations
 
-# Stage 7 QC: segment.focus_score() (variance of Laplacian, normalized to the
-# image's own dynamic range -- see that function's docstring for why: raw,
-# non-normalized variance would be ~66000x different between an 8-bit and a
-# 16-bit camera for similar-looking images, which matters concretely here
-# since the team's real Olympus camera (SC30, see CAMERA_SC30_* below) is
-# 8-bit/channel while the public reference images this was calibrated on are
-# 16-bit) below this is flagged. Calibrated by
-# ichnos_image/scripts/calibrate_focus_threshold.py: applies synthetic blur
-# to the 3 real DIC reference images (179997/165478/182391) and finds where
-# segmentation mask IoU vs. the sharp baseline first drops below 0.8; this is
-# the mean focus_score at that break point across the 3 images.
-# Small sample (3 images, one objective) -- recalibrate with real wet-lab
-# images once available. Re-run the calibration script (not just rescale this
-# number) after any further change to focus_score()'s definition.
-FOCUS_SCORE_THRESHOLD = 5.580033091722408e-06
+from importlib import resources
+from pathlib import Path
 
-# Stage 7 QC: correct.estimate_registration_shift()'s magnitude (px) above
-# this is flagged. Calibrated by
-# ichnos_image/scripts/calibrate_registration_threshold.py: applies a known
-# synthetic green/red shift to real GFP images (179997/165478) and finds
-# where the resulting per-cell ratio's error vs. true ratio first exceeds
-# 10%; this is the more conservative (smaller) of the two images' break
-# points. The 10% error tolerance is a reasonable default, not a requirement
-# from the team -- tighten it if a stricter accuracy target is set.
-REGISTRATION_SHIFT_THRESHOLD_PX = 3.5
 
-# Stage 7 QC: images taken less than this many minutes after lamp ignition
-# are flagged (mercury/xenon burners drift in intensity while warming up).
-# Not calibrated here -- this is the team's own stated protocol figure,
-# applied as a QC rule rather than re-derived.
-LAMP_WARMUP_THRESHOLD_MINUTES = 15.0
+MODELS_PACKAGE = "ichnos.models"
 
-# Stage 3 background estimation: only trust the histogram-mode background
-# estimate if it falls at or below this percentile of the image; above that,
-# fall back to the plain low-percentile estimate. Calibrated empirically in
-# ichnos_image/tests/test_correct.py: the bare mode estimator latches onto
-# the cell-intensity peak instead of the background peak once cells cover
-# roughly 60%+ of the field, and this sanity bound catches that before it
-# happens (background stays below the 20th percentile in every density
-# tested up to that point).
-BACKGROUND_MODE_SANITY_PERCENTILE = 20.0
 
-# Typical yeast (S. cerevisiae) cell diameter, µm -- used as the default in
-# correct.suggest_rolling_ball_radius(). Per the team's own figure.
-YEAST_CELL_DIAMETER_UM = 5.0
+def model_path(filename: str) -> Path:
+    """Filesystem path to one of the packaged SBML resources.
+
+    Goes through importlib.resources so this works from an installed wheel,
+    not only from a source checkout.
+    """
+    with resources.as_file(resources.files(MODELS_PACKAGE) / filename) as path:
+        if not path.exists():
+            raise FileNotFoundError(f"packaged model {filename!r} is missing from {MODELS_PACKAGE}")
+        return Path(path)
+
+
+TIP_TETR_MODEL_FILE = "TIP_TetR_binding.sbml"
+REPORTER_MODEL_FILE = "reporter_module_v2.sbml"
+
+# Two variants, each a merge of three SBML files: TIP-TetR, the reporter, and
+# one sensing module. These four files are a library of two variants, not
+# four modules that all combine at once.
+#
+# 2026-09-10 (carried over from the source): the "ox" sensing file changed
+# from oxidative_module_v3.sbml (static Hill, ox_step) to ox_adaptive.sbml
+# (adaptive sensor with A_ox/X_ox buffer-node states). The ER variant is
+# UNCHANGED -- ERModule.sbml is still the static Hill version.
+VARIANTS: dict[str, dict] = {
+    "er": {
+        "sensing_file": "ERModule.sbml",
+        "tip_name": "TIP_er",
+        # 2026-09-11 (carried over): ERModule gained an adaptive sensor
+        # (A_er/X_er) AND a simulated reporter pair (R_imm/R_mat) used only
+        # to fit the module against the Pincus 2010 time course. R_imm/R_mat
+        # are NOT part of the circuit -- the real readout is the tandem-timer
+        # reporter module -- so they are excluded from the merge (confirmed
+        # with the team). Listed BY NAME rather than id, consistent with
+        # every other matching decision in this codebase.
+        "calibration_only_species": ("R_imm", "R_mat"),
+    },
+    "ox": {
+        "sensing_file": "ox_adaptive.sbml",
+        "tip_name": "TIP_ox",
+    },
+}
+
+# There is no working copper/CuSO4 model. The software must reject that
+# choice rather than silently fall back to another variant.
+UNSUPPORTED_VARIANTS = {"cu": "no copper/CuSO4 sensing model or calibration exists"}
+
+SHARED_PARAM_NAMES = {"mu", "P"}
+SHARED_PARAM_TOLERANCE = 1e-9
+
+CROSS_VARIANT_SHARED_NAMES = {
+    "k_deg_TIP",  # post-production degradation of TIP; same TIP coding sequence
+                  # in ox/er/copper (confirmed wet lab 2026-08-17) -> must match.
+}
+CROSS_VARIANT_ABS_TOL = 1e-9
+
+
+def sensing_path(variant: str) -> Path:
+    """Packaged SBML for a variant's sensing module."""
+    if variant in UNSUPPORTED_VARIANTS:
+        raise ValueError(f"variant {variant!r} is not supported: {UNSUPPORTED_VARIANTS[variant]}")
+    if variant not in VARIANTS:
+        raise KeyError(f"unknown variant {variant!r}; available: {sorted(VARIANTS)}")
+    return model_path(VARIANTS[variant]["sensing_file"])

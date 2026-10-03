@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ichnos.config import (
+from .instrument import (
     FOCUS_SCORE_THRESHOLD,
     LAMP_WARMUP_THRESHOLD_MINUTES,
     REGISTRATION_SHIFT_THRESHOLD_PX,

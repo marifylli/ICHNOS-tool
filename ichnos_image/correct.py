@@ -9,12 +9,11 @@ from scipy.ndimage import shift as ndi_shift
 from scipy.stats import theilslopes
 from skimage.registration import phase_cross_correlation
 
-from ichnos.config import (
+from . import instrument
+from .instrument import (
     BACKGROUND_MODE_SANITY_PERCENTILE,
     YEAST_CELL_DIAMETER_UM,
 )
-
-from . import instrument
 
 
 def pixel_size_at_sample_um(

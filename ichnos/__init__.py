@@ -1,15 +1,22 @@
-"""ichnos — core package shared across the ICHNOS pipeline's per-domain
-packages (ichnos_image today; a future ratio/decoder package for Stage 6
-would live alongside it here).
+"""ichnos -- the core package: the shared data contract, the model, and
+(once they exist) calibration and decoding.
 
-    schema.py   CellRecord / CSV_COLUMNS: the one definition of what a row
-                of the final per-cell dataset looks like -- ichnos_image
-                (and anything downstream that reads its CSV output) imports
-                this rather than defining its own copy.
-    config.py   Calibrated pipeline constants (QC thresholds, protocol
-                numbers) with their provenance, so a number isn't just a
-                hardcoded literal somewhere inside a function.
+    schema.py        CellRecord / CSV_COLUMNS: the one definition of a row of
+                     the per-cell dataset. ichnos_image writes these; anything
+                     reading that CSV imports this rather than re-deriving it
+                     from the header.
+    config.py        Model configuration -- which SBML files make up each
+                     variant, shared-parameter rules, unsupported variants.
+    build.py         Merges TIP-TetR, the reporter and one sensing module into
+                     one SBML model.
+    merge_checks.py  Unit, collision and shared-parameter checks run during
+                     the merge.
+    io.py            Saving a merged model with its manifest.
+    models/          The four packaged SBML sources plus manifest.json.
 
-Deliberately excludes Stage 6 (ratio/FRET decoder) for now -- out of scope
-until that stage is tackled.
+Nothing is imported eagerly here. ichnos_image needs only ichnos.schema, and
+importing it must not pull in libsbml or a solver.
+
+Not implemented yet: calibrate.py, decode.py, uncertainty.py. There is no
+decoder, so no dose or elapsed-time estimate can be produced.
 """

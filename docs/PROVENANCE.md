@@ -81,6 +81,49 @@ afb931c657dc3b9ea61198aeafb4cdd45eef841f61660dc99d651cabd4dd6fcd  tests/test_seg
 f17af34bd2dadc3ff8ba71ab9aac35ef90ca9b334ae80496c1e31ce2561dc9db  tests/test_synthesize.py
 ```
 
+## Step 3 — migrated from Ichnos_PULSE `e66de65c`
+
+| Source path | Path here | Change |
+| --- | --- | --- |
+| `integration/TIP_TetR_binding.sbml` | `ichnos/models/TIP_TetR_binding.sbml` | verbatim |
+| `integration/reporter_module_v2.sbml` | `ichnos/models/reporter_module_v2.sbml` | verbatim |
+| `integration/ox_adaptive.sbml` | `ichnos/models/ox_adaptive.sbml` | verbatim |
+| `integration/ERModule.sbml` | `ichnos/models/ERModule.sbml` | verbatim |
+| `python/ichnos_config.py` | `ichnos/config.py` | packaged resources instead of sibling-checkout paths; copper rejected explicitly; no parameter values changed |
+| `python/ichnos_core.py` | `ichnos/build.py` | MATLAB stale-duplicate check and its path removed; no implicit save; merge logic and unit aliases unchanged |
+| `python/ichnos_diagnostics.py` | `ichnos/merge_checks.py` | stale-duplicate check dropped with its MATLAB path |
+| `python/ichnos_io.py` | `ichnos/io.py + ichnos/display_names.py` | artifact I/O split from display naming; output directory is now an explicit argument |
+
+### SHA256 of the source files (at `e66de65c`)
+
+```
+217e162a61f50a96fa9720bdab4471db7ecdc8ebe1c3226359079280ec192706  integration/TIP_TetR_binding.sbml
+738009d231b79dc275c13b87005202bb97f0ae459ee421326da067480aa002f4  integration/reporter_module_v2.sbml
+843a41b1f46592b3451625706833de8ba45f8d8443d3a50cd661c592339422ba  integration/ox_adaptive.sbml
+b49e9c0e284776e646cb4011e24a64a115a19abcda02790be97456af92aa2913  integration/ERModule.sbml
+0aa67f87b054b77176eaf93dd93a0f2025678985e381d494c0a5f2342ce25369  python/ichnos_config.py
+70bbcd5967187057fadc67ca3b75fcc9e2c37b31f32da5ba27903427063ece73  python/ichnos_core.py
+15c94fb691b1e2bbb40c1a04abf1308db8fdcec3fa04510a55424a74d0c7d69e  python/ichnos_diagnostics.py
+c25bb7a393896e3acda1433ec6a15d095126133b6eeeec11e8a340e0dc3c5763  python/ichnos_io.py
+```
+
+### Equivalence verified at migration time
+
+Both variants were built with the original `Ichnos_PULSE` code and with the
+migrated code in the same session, on 2026-10-03:
+
+- the four packaged SBML files are byte-identical to the source;
+- the merged SBML **string** is identical for `ox` and for `er`;
+- simulated trajectories (0-50 h, 2001 points, 11 columns, RoadRunner via
+  tellurium) are **bit-identical** -- maximum absolute and relative
+  difference 0.0;
+- a wheel installed into a clean virtualenv resolves all four packaged models
+  and reproduces the same merged-model hash.
+
+`tests/model/test_build.py` pins those hashes, so a later change to the model
+shows up as a test failure rather than as a silent difference.
+
+
 ## Licensing
 
 `ICHNOS-ablation` is MIT. `DryLabTool`, `Ichnos_PULSE` and `ichnos-fisher` carry

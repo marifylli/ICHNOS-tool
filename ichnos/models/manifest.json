@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "source_repository": "https://github.com/ioanna888/Ichnos_PULSE",
+  "source_commit": "e66de65cb7ca7c170bfff96c181577f5e9df4db3",
+  "source_directory": "integration/",
+  "copied_verbatim": true,
+  "files": {
+    "ERModule.sbml": {
+      "sha256": "b49e9c0e284776e646cb4011e24a64a115a19abcda02790be97456af92aa2913",
+      "bytes": 11947
+    },
+    "TIP_TetR_binding.sbml": {
+      "sha256": "217e162a61f50a96fa9720bdab4471db7ecdc8ebe1c3226359079280ec192706",
+      "bytes": 10464
+    },
+    "ox_adaptive.sbml": {
+      "sha256": "843a41b1f46592b3451625706833de8ba45f8d8443d3a50cd661c592339422ba",
+      "bytes": 8222
+    },
+    "reporter_module_v2.sbml": {
+      "sha256": "738009d231b79dc275c13b87005202bb97f0ae459ee421326da067480aa002f4",
+      "bytes": 14209
+    }
+  },
+  "variants": {
+    "ox": {
+      "sensing_file": "ox_adaptive.sbml",
+      "calibration_status": "uncalibrated",
+      "note": "adaptive sensor, A_ox/X_ox rate-rule states"
+    },
+    "er": {
+      "sensing_file": "ERModule.sbml",
+      "calibration_status": "uncalibrated",
+      "note": "R_imm/R_mat are fitting-only and excluded from the merge"
+    }
+  },
+  "unsupported_variants": {
+    "cu": "no copper/CuSO4 sensing model or calibration exists"
+  },
+  "parameter_profile": null,
+  "note": "No parameter profile has been applied. The merged model uses the values embedded in these SBML files, unchanged from the source repository. Nothing here has been calibrated against measurements from this project's own instrument."
+}

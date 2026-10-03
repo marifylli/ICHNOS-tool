@@ -1,6 +1,6 @@
 """Core ichnos package: shared schema + config are importable, and
 ichnos_image actually uses them (not duplicated copies)."""
-from ichnos import config
+from ichnos_image import instrument as config
 from ichnos.schema import CellRecord, CSV_COLUMNS
 from ichnos_image import export
 from ichnos_image.schema import CellRecord as ImageCellRecord

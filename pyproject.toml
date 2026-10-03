@@ -19,12 +19,21 @@ dependencies = [
 image = ["scikit-image", "pillow", "tifffile"]
 # Optional deep-learning segmentation backend.
 cellpose = ["cellpose", "torch"]
-# Added in Step 3, when the SBML builder and simulator are migrated:
-#   model = ["python-libsbml", "libroadrunner", "PyYAML"]
+# Model building and simulation. tellurium is kept for now rather than
+# dropping to libroadrunner alone: the migrated builder and simulator run
+# exactly as they do in Ichnos_PULSE, so the migration changes no behaviour.
+# Swapping the solver entry point is its own change, in its own step.
+model = ["python-libsbml", "tellurium"]
 dev = ["pytest"]
 
 [tool.setuptools]
-packages = ["ichnos", "ichnos_image"]
+packages = ["ichnos", "ichnos.models", "ichnos_image"]
+
+[tool.setuptools.package-data]
+# The SBML sources ship inside the wheel and are reached with
+# importlib.resources, so an installed package carries its own models rather
+# than looking for a sibling checkout.
+"ichnos.models" = ["*.sbml", "*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

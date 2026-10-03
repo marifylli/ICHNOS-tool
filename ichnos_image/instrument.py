@@ -295,3 +295,63 @@ def is_quantitatively_calibrated() -> bool:
     figure, depend on this being True.
     """
     return not UNRESOLVED
+
+
+# --------------------------------------------------------------------------
+# Calibrated QC thresholds
+# --------------------------------------------------------------------------
+# Moved here from ichnos/config.py in Step 3, when that module became the
+# model/variant configuration. These are properties of the image analysis as
+# calibrated against a specific acquisition setup, so they belong on the
+# image side and must not collide with model config.
+#
+# All of them were calibrated on 16-bit public reference images from a
+# different microscope. They are the best available starting points, not
+# measurements of this rig, and each needs recalibrating once real images
+# from the QImaging camera exist.
+
+# Stage 7 QC: segment.focus_score() (variance of Laplacian, normalized to the
+# image's own dynamic range -- see that function's docstring for why: raw,
+# non-normalized variance would be ~66000x different between an 8-bit and a
+# 16-bit camera for similar-looking images, which matters concretely here
+# since the team's real Olympus camera (SC30, see CAMERA_SC30_* below) is
+# 8-bit/channel while the public reference images this was calibrated on are
+# 16-bit) below this is flagged. Calibrated by
+# ichnos_image/scripts/calibrate_focus_threshold.py: applies synthetic blur
+# to the 3 real DIC reference images (179997/165478/182391) and finds where
+# segmentation mask IoU vs. the sharp baseline first drops below 0.8; this is
+# the mean focus_score at that break point across the 3 images.
+# Small sample (3 images, one objective) -- recalibrate with real wet-lab
+# images once available. Re-run the calibration script (not just rescale this
+# number) after any further change to focus_score()'s definition.
+FOCUS_SCORE_THRESHOLD = 5.580033091722408e-06
+
+# Stage 7 QC: correct.estimate_registration_shift()'s magnitude (px) above
+# this is flagged. Calibrated by
+# ichnos_image/scripts/calibrate_registration_threshold.py: applies a known
+# synthetic green/red shift to real GFP images (179997/165478) and finds
+# where the resulting per-cell ratio's error vs. true ratio first exceeds
+# 10%; this is the more conservative (smaller) of the two images' break
+# points. The 10% error tolerance is a reasonable default, not a requirement
+# from the team -- tighten it if a stricter accuracy target is set.
+REGISTRATION_SHIFT_THRESHOLD_PX = 3.5
+
+# Stage 7 QC: images taken less than this many minutes after lamp ignition
+# are flagged (mercury/xenon burners drift in intensity while warming up).
+# Not calibrated here -- this is the team's own stated protocol figure,
+# applied as a QC rule rather than re-derived.
+LAMP_WARMUP_THRESHOLD_MINUTES = 15.0
+
+# Stage 3 background estimation: only trust the histogram-mode background
+# estimate if it falls at or below this percentile of the image; above that,
+# fall back to the plain low-percentile estimate. Calibrated empirically in
+# ichnos_image/tests/test_correct.py: the bare mode estimator latches onto
+# the cell-intensity peak instead of the background peak once cells cover
+# roughly 60%+ of the field, and this sanity bound catches that before it
+# happens (background stays below the 20th percentile in every density
+# tested up to that point).
+BACKGROUND_MODE_SANITY_PERCENTILE = 20.0
+
+# Typical yeast (S. cerevisiae) cell diameter, µm -- the default in
+# correct.suggest_rolling_ball_radius(). Per the team's own figure.
+YEAST_CELL_DIAMETER_UM = 5.0
