@@ -25,9 +25,10 @@ today; the name describes the target, not the current capability.
 ## Install
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[image,dev]"
-pytest -q
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[image,model,dev]"
+python -m pytest -q
 ```
 
 ## Implementation order
