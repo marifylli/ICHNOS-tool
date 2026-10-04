@@ -1,26 +1,36 @@
 # ICHNOS tool
 
-Turns fluorescence microscopy images of the ICHNOS yeast stress biosensor into
-an estimate of **stress dose** and **time since stress onset**, with QC flags
-and stated uncertainty.
+Software under development for converting fluorescence microscopy images
+of the ICHNOS yeast stress biosensor into estimates of stress dose and
+time since stress onset, with quality-control flags and uncertainty.
 
-This repository is the *product*. The research repositories
-(`Ichnos_PULSE`, `ICHNOS-ablation`, `ichnos-fisher`, `DryLabTool`) keep the
-studies and stay unchanged; code is migrated here with its provenance
-recorded in [`docs/PROVENANCE.md`](docs/PROVENANCE.md).
+The current implementation processes images and simulates the ox and er
+models. It does not yet estimate dose or time from experimental images.
+
+The research repositories (`Ichnos_PULSE`, `ICHNOS-ablation`,
+`ichnos-fisher`, `DryLabTool`) retain the supporting studies.
+Migrated code and model sources are recorded in
+[docs/PROVENANCE.md](docs/PROVENANCE.md).
 
 ## Status
 
-| Stage | State |
+| Component | State |
 | --- | --- |
-| Image pipeline (`ichnos_image`) | migrated, tests green |
-| Shared schema (`ichnos.schema`) | migrated as-is, versioning not yet added |
-| SBML model + builder (`ichnos.build`) | not yet migrated — Step 3 |
-| Calibration / decoder (`ichnos.calibrate`, `ichnos.decode`) | **not implemented** |
-| Uncertainty | **not implemented** |
+| Image pipeline (`ichnos_image`) | Implemented; computational tests pass |
+| RGB extraction | Explicit CLI/API selection; experimental mapping unresolved |
+| Saturation QC | Checked before RGB extraction and forwarded through the pipeline |
+| Shared schema (`ichnos.schema`) | Migrated; schema versioning pending |
+| SBML models and builder (`ichnos.build`) | Migrated for ox and er |
+| Shared simulator (`ichnos.simulate`) | Implemented with solver settings and observable selections |
+| Parameter profiles (`ichnos.params`) | Packaged; value, unit and provenance checks implemented |
+| Model exports (`ichnos.io`) | Unique archives with manifests and overwrite protection |
+| Experimental exposure protocol | Constant-stress baseline; clearance support pending |
+| Measurement mapping and session calibration | Not complete |
+| Calibration artifact and decoder | Not implemented |
+| Estimator uncertainty | Not implemented |
 
-No decoder exists yet. Nothing in this repository estimates dose or time
-today; the name describes the target, not the current capability.
+Passing tests verify software behaviour under controlled assumptions.
+They do not establish experimental accuracy for dose or time estimation.
 
 ## Install
 
@@ -31,17 +41,39 @@ python -m pip install -e ".[image,model,dev]"
 python -m pytest -q
 ```
 
-## Implementation order
+The optional Cellpose backend requires the `cellpose` extra.
 
-1. **Step 1 — baseline migration** *(done)*: image pipeline and shared schema
-   moved here verbatim, test-to-script dependency removed, suite green.
-2. Step 2 — split image config into `instrument.py`, extract the image loader
-   into `image_io.py`, apply the confirmed QImaging/CKX41 instrument profile.
-3. Step 3 — migrate the four SBML files and the builder from `Ichnos_PULSE`,
-   with no parameter changes.
-4. Step 4 — one shared simulator, naming, parameter profiles, protocol.
-5. Step 5 — measurement mapping and session calibration, population grouping.
-6. Step 6 — calibration artifact and decoder for one known variant.
-7. Step 7 — uncertainty with a validated noise model; second variant.
+## Image pipeline CLI
 
-Model or protocol changes always go in a separate commit from file moves.
+```bash
+python scripts/run_pipeline.py --help
+```
+
+For RGB acquisitions, explicitly select the extraction method for each
+channel using `--green-extraction` and `--red-extraction`.
+The same choices are applied to samples and crosstalk controls.
+
+The CLI saturation threshold defaults to the instrument profile and can
+be overridden with `--saturation-value`. It is applied to stored image
+components before fluorescence extraction.
+
+Explicit extraction choices are configuration options, not evidence
+that those choices have been experimentally calibrated.
+
+## Next implementation steps
+
+1. Align experimental metadata with the simulator: variant, initial dose,
+   actual elapsed times, exposure history and initial model state.
+2. Add optional clearance with explicit assumptions and parameter provenance.
+3. Implement the mapping from model observables to measured fluorescence,
+   session calibration and population grouping.
+4. Build a calibration artifact and decoder for one known variant.
+5. Evaluate dose/time ambiguity and estimator uncertainty using an
+   appropriate measurement-noise model.
+6. Extend the validated workflow to the second variant.
+
+Copper/CuSO4 modelling is outside the current implementation scope.
+Its images can be processed without a copper-specific model or decoder.
+
+See [docs/limitations.md](docs/limitations.md) for limitations and
+unresolved measurement decisions.
