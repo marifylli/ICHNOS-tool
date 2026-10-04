@@ -280,3 +280,32 @@ def run_protocol(
         reset=False,
     )
     return result, equilibration
+
+def run_protocol_at_times(
+    runner,
+    protocol: StressProtocol,
+    *,
+    times_hours,
+    id_to_name: Optional[dict[str, str]] = None,
+    require_equilibrium: bool = True,
+) -> tuple[sim.SimulationResult, Equilibration]:
+    """Pre-equilibrate, apply stress and observe at specified onset times."""
+    # Validate before changing the runner.
+    times = sim.validate_observation_times(times_hours)
+
+    equilibration = equilibrate(
+        runner, protocol, id_to_name=id_to_name
+    )
+    if require_equilibrium:
+        equilibration.require_converged()
+
+    apply_stress(runner, protocol, id_to_name=id_to_name)
+
+    result = sim.simulate_at_times(
+        runner,
+        times_hours=times,
+        id_to_name=id_to_name,
+        solver=protocol.solver,
+        reset=False,
+    )
+    return result, equilibration

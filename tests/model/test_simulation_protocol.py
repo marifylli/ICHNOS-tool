@@ -191,3 +191,35 @@ def test_add_clearance_refuses_a_second_rule(variant):
 def test_unsupported_variant_has_no_stress_parameter():
     with pytest.raises(proto.ProtocolError):
         proto.StressProtocol(variant="cu", dose=1.0).stress_parameter()
+
+
+@pytest.mark.parametrize(
+    "variant, dose, times",
+    [
+        ("ox", 75.0, [0.5, 1.0, 2.0, 3.0]),
+        ("er", 500.0, [0.75, 2.0, 4.0]),
+    ],
+)
+def test_protocol_returns_requested_observation_times(
+    variant, dose, times
+):
+    _, model, runner, names = _loaded(variant)
+    protocol = proto.StressProtocol(variant=variant, dose=dose)
+
+    result, equilibration = proto.run_protocol_at_times(
+        runner,
+        protocol,
+        times_hours=times,
+        id_to_name=names,
+    )
+
+    assert equilibration.converged
+    assert result.time.tolist() == pytest.approx(times)
+    assert result.n_points == len(times)
+    assert result.has("Observed_Green")
+    assert result.has("Measured_Ratio_RG")
+
+    stress_id = naming.resolve_id(
+        model, protocol.stress_parameter(), kinds=("parameter",)
+    )
+    assert runner[stress_id] == pytest.approx(dose)
