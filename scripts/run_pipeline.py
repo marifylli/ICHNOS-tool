@@ -87,12 +87,12 @@ def _build_image_sets(
         image_sets.append(
             ImageSet(
                 green=plane_for_channel(
-                    load_image(row.green_path),
+                    raw_green,
                     "green",
                     method=green_extraction,
                 ),
                 red=plane_for_channel(
-                    load_image(row.red_path),
+                    raw_red,
                     "red",
                     method=red_extraction,
                 ),
@@ -227,10 +227,6 @@ def main():
         green_extraction=args.green_extraction,
         red_extraction=args.red_extraction,
     )
-
-    image_sets = _build_image_sets(args.manifest)
-    sessions = {s.session_id for s in image_sets}
-    bleed_by_session = _calibrate_bleed_per_session(args.controls, sessions, args.bleed_default)
 
     segmentation_kwargs = {}
     if args.resize_factor != 1.0:
