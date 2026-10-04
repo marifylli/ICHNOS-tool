@@ -2,10 +2,10 @@
 copy that is never overwritten, and a JSON manifest recording exactly which
 sources and parameter values went into it.
 
-Migrated from Ichnos_PULSE python/ichnos_io.py @ e66de65c. Function bodies
-are unchanged except for one thing: the output directory is now an argument
-rather than a module-level constant pointing inside the source checkout.
-Artifacts belong in a work directory the caller chooses, not inside an
+Migrated from Ichnos_PULSE python/ichnos_io.py @ e66de65c.
+The output directory is supplied by the caller. Archive names include
+a timestamp and UUID, and exclusive creation prevents overwrites.
+Artifacts belong in a caller-selected work directory, not inside an
 installed package.
 
 The display helpers that were in this module are in display_names.py.
@@ -14,9 +14,9 @@ The display helpers that were in this module are in display_names.py.
 import os
 import json
 from datetime import datetime
+from uuid import uuid4
 
 import libsbml
-
 from .config import SHARED_PARAM_NAMES
 from .merge_checks import find_param_value_anywhere
 
@@ -52,16 +52,10 @@ def _collect_shared_param_snapshot(model):
 
 
 def save_merged_sbml(sbml_str, variant, m_tetr, source_paths, out_dir):
-    """Writes the merged SBML to two places:
-      - exportsbml/merged_<variant>.sbml — 'latest' pointer, overwritten every run
-      - exportsbml/archive/merged_<variant>_<timestamp>.sbml — never overwritten,
-        plus a sidecar .json manifest recording exactly which source .sbml files
-        (and their mtimes) and which key parameter values went into THIS merge.
+    """Save a latest copy and a uniquely named archive with its manifest.
 
-    The archive copy exists so that downstream work (sensitivity analysis,
-    the no-feedback comparison circuit, etc.) can always point back at the
-    exact merged model a given result came from, instead of relying on
-    whatever 'merged_<variant>.sbml' happens to contain right now.
+    Existing archive files are never overwritten.
+    Update latest only after both archive files are written.
 
     Returns (latest_path, archive_path, manifest_path).
     """
@@ -70,31 +64,51 @@ def save_merged_sbml(sbml_str, variant, m_tetr, source_paths, out_dir):
     archive_dir = os.path.join(out_dir, "archive")
     _ensure_dir(archive_dir)
 
-    latest_path = os.path.join(out_dir, f"merged_{variant}.sbml")
-    with open(latest_path, "w", encoding="utf-8") as f:
-        f.write(sbml_str)
+    built_at = datetime.now()
+    timestamp = built_at.strftime("%Y%m%d_%H%M%S_%f")
+    archive_id = uuid4().hex
+    archive_stem = f"merged_{variant}_{timestamp}_{archive_id}"
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    archive_path = os.path.join(archive_dir, f"merged_{variant}_{timestamp}.sbml")
-    with open(archive_path, "w", encoding="utf-8") as f:
-        f.write(sbml_str)
+    archive_path = os.path.join(archive_dir, archive_stem + ".sbml")
+    manifest_path = os.path.join(
+        archive_dir, archive_stem + ".manifest.json"
+    )
 
     manifest = {
         "variant": variant,
-        "built_at": datetime.now().isoformat(timespec="seconds"),
+        "built_at": built_at.isoformat(timespec="microseconds"),
         "source_files": {
             label: {
-                "path": path,
-                "modified": datetime.fromtimestamp(os.path.getmtime(path)).isoformat(timespec="seconds")
-                if os.path.isfile(path) else None,
+                "path": str(path),
+                "modified": (
+                    datetime.fromtimestamp(
+                        os.path.getmtime(path)
+                    ).isoformat(timespec="seconds")
+                    if os.path.isfile(path)
+                    else None
+                ),
             }
             for label, path in source_paths.items()
         },
-        "key_parameters_in_merged_model": _collect_shared_param_snapshot(m_tetr),
+        "key_parameters_in_merged_model": (
+            _collect_shared_param_snapshot(m_tetr)
+        ),
     }
-    manifest_path = archive_path.replace(".sbml", ".manifest.json")
-    with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(manifest, f, indent=2, ensure_ascii=False)
+
+    # Serialize before writing any files.
+    manifest_json = json.dumps(
+        manifest, indent=2, ensure_ascii=False
+    )
+
+    with open(archive_path, "x", encoding="utf-8") as f:
+        f.write(sbml_str)
+
+    with open(manifest_path, "x", encoding="utf-8") as f:
+        f.write(manifest_json)
+
+    latest_path = os.path.join(out_dir, f"merged_{variant}.sbml")
+    with open(latest_path, "w", encoding="utf-8") as f:
+        f.write(sbml_str)
 
     print(f"  Merged SBML (latest):  {latest_path}")
     print(f"  Merged SBML (archive): {archive_path}")
