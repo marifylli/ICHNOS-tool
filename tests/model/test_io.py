@@ -70,4 +70,3 @@ def test_archive_collision_preserves_existing_files(
     assert [
         Path(path).read_bytes() for path in paths
     ] == original_contents
-    
