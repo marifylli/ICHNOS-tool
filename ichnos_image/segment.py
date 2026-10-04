@@ -8,7 +8,30 @@ import numpy as np
 from scipy import ndimage as ndi
 from skimage import filters, morphology, segmentation, measure
 from skimage.feature import peak_local_max
+from inspect import signature
 
+_REMOVE_SMALL_OBJECTS_HAS_MAX_SIZE = (
+    "max_size"
+    in signature(morphology.remove_small_objects).parameters
+)
+
+
+def _remove_objects_below_size(
+    binary: np.ndarray, min_size: int
+) -> np.ndarray:
+    """Keep connected objects containing at least min_size pixels."""
+    if min_size <= 0:
+        return binary.copy()
+
+    if _REMOVE_SMALL_OBJECTS_HAS_MAX_SIZE:
+        return morphology.remove_small_objects(
+            binary, max_size=min_size - 1
+        )
+
+    # Compatibility with scikit-image versions before 0.26.
+    return morphology.remove_small_objects(
+        binary, min_size=min_size
+    )
 
 def segment_cells(
     bf_image: np.ndarray, method: str = "otsu", min_size: int = 30, resize_factor: float = 1.0, **cellpose_kwargs
@@ -115,7 +138,7 @@ def _segment_otsu(bf_image: np.ndarray, min_size: int = 30) -> np.ndarray:
     binary, morphology.disk(3), mode="ignore"
     )
     binary = ndi.binary_fill_holes(binary)
-    binary = morphology.remove_small_objects(binary, min_size=min_size)
+    binary = _remove_objects_below_size(binary, min_size)
 
     distance = ndi.distance_transform_edt(binary)
     peaks = peak_local_max(distance, min_distance=5, labels=binary.astype(int))
