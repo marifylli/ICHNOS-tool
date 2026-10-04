@@ -26,6 +26,7 @@ from typing import Optional
 
 import libsbml
 import numpy as np
+import math
 
 from . import naming, simulate as sim
 
@@ -80,6 +81,55 @@ class StressProtocol:
     equilibration_horizon_hours: float = 50.0
     equilibration_tolerance: float = 1e-6
     solver: sim.SolverSettings = field(default_factory=sim.SolverSettings)
+
+    def __post_init__(self) -> None:
+        if self.variant not in STRESS_PARAMETER:
+            raise ProtocolError(
+                f"unsupported variant: {self.variant!r}"
+            )
+
+        if self.dose_units != "uM":
+            raise ProtocolError(
+                "dose_units must be 'uM'; convert the dose explicitly "
+                "before creating the protocol"
+            )
+
+        if not isinstance(self.clears, bool):
+            raise ProtocolError("clears must be a boolean")
+
+        numeric_fields = (
+            ("dose", False),
+            ("equilibration_horizon_hours", True),
+            ("equilibration_tolerance", True),
+        )
+
+        for name, strictly_positive in numeric_fields:
+            raw_value = getattr(self, name)
+
+            if isinstance(raw_value, (bool, np.bool_)):
+                raise ProtocolError(f"{name} must be a number")
+
+            try:
+                value = float(raw_value)
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise ProtocolError(
+                    f"{name} must be a finite number"
+                ) from exc
+
+            if not math.isfinite(value):
+                raise ProtocolError(
+                    f"{name} must be a finite number"
+                )
+
+            if strictly_positive and value <= 0:
+                raise ProtocolError(f"{name} must be positive")
+
+            if not strictly_positive and value < 0:
+                raise ProtocolError(
+                    f"{name} must be non-negative"
+                )
+
+            object.__setattr__(self, name, value)
 
     def stress_parameter(self) -> str:
         if self.variant not in STRESS_PARAMETER:
