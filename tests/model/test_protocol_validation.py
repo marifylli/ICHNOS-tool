@@ -36,3 +36,33 @@ def test_invalid_protocol_is_rejected(changes):
 
     with pytest.raises(ProtocolError):
         StressProtocol(**arguments)
+
+@pytest.mark.parametrize(
+    "rate",
+    [
+        None,
+        0,
+        -1,
+        float("nan"),
+        float("inf"),
+        True,
+        "invalid",
+    ],
+)
+def test_clearance_requires_explicit_positive_rate(rate):
+    with pytest.raises(ProtocolError):
+        StressProtocol(
+            variant="ox",
+            dose=75,
+            clears=True,
+            clearance_rate_per_hour=rate,
+        )
+
+
+def test_constant_protocol_rejects_unused_clearance_rate():
+    with pytest.raises(ProtocolError):
+        StressProtocol(
+            variant="ox",
+            dose=75,
+            clearance_rate_per_hour=0.5,
+        )

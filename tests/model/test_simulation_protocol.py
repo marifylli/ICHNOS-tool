@@ -4,6 +4,7 @@ import contextlib
 
 import libsbml
 import pytest
+import numpy as np
 
 from ichnos import build, naming, protocol as proto, simulate as sim
 
@@ -223,3 +224,84 @@ def test_protocol_returns_requested_observation_times(
         model, protocol.stress_parameter(), kinds=("parameter",)
     )
     assert runner[stress_id] == pytest.approx(dose)
+
+@pytest.mark.parametrize("variant", VARIANTS)
+def test_clearance_matches_exponential_decay(variant):
+    sbml, original_model, _, _ = _loaded(variant)
+    protocol = proto.StressProtocol(
+        variant=variant,
+        dose=75,
+        clears=True,
+        clearance_rate_per_hour=0.5,
+    )
+    runner, model = proto.load_protocol_model(sbml, protocol)
+    names = naming.id_to_name_map(model)
+
+    result, equilibration = proto.run_protocol_at_times(
+        runner,
+        protocol,
+        times_hours=[0, 0.5, 1, 2, 4],
+        id_to_name=names,
+    )
+
+    assert equilibration.converged
+    np.testing.assert_allclose(
+        result[protocol.stress_parameter()],
+        75 * np.exp(-0.5 * result.time),
+        rtol=1e-6,
+        atol=1e-8,
+    )
+    assert result.exposure == {
+        "variant": variant,
+        "initial_dose": 75.0,
+        "dose_units": "uM",
+        "time_units": "hour",
+        "model": "first_order_decay",
+        "clearance_rate_per_hour": 0.5,
+    }
+
+    # Preparing the exposure did not modify the original model.
+    assert not proto.has_rule_for(
+        original_model, protocol.stress_parameter()
+    )
+
+
+@pytest.mark.parametrize("variant", VARIANTS)
+@pytest.mark.parametrize(
+    "mismatch",
+    ["missing_rule", "different_rate", "constant_requested"],
+)
+def test_protocol_rejects_mismatched_loaded_exposure(
+    variant, mismatch
+):
+    sbml, _, _, _ = _loaded(variant)
+
+    loaded_protocol = proto.StressProtocol(
+        variant=variant,
+        dose=75,
+        clears=mismatch != "missing_rule",
+        clearance_rate_per_hour=(
+            None if mismatch == "missing_rule" else 0.5
+        ),
+    )
+    requested_protocol = proto.StressProtocol(
+        variant=variant,
+        dose=75,
+        clears=mismatch != "constant_requested",
+        clearance_rate_per_hour=(
+            None
+            if mismatch == "constant_requested"
+            else 0.2 if mismatch == "different_rate" else 0.5
+        ),
+    )
+    runner, model = proto.load_protocol_model(
+        sbml, loaded_protocol
+    )
+
+    with pytest.raises(proto.ProtocolError):
+        proto.run_protocol_at_times(
+            runner,
+            requested_protocol,
+            times_hours=[0.5, 1],
+            id_to_name=naming.id_to_name_map(model),
+        )
