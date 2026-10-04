@@ -4,24 +4,55 @@ Things this repository does **not** do, and claims it must not make.
 
 ## Not implemented
 
-- There is no decoder. No dose and no elapsed-time estimate can be produced.
-- There is no model, simulator or calibration artifact here yet.
-- No uncertainty is computed. CRLB figures from `ichnos-fisher` are a local
-  theoretical bound under an assumed noise model, not a confidence interval of
-  any estimator, and are not reproduced here.
+- No decoder exists. Experimental images cannot yet be converted into
+  dose or elapsed-time estimates.
+- Measurement mapping, complete session calibration and a decoder
+  calibration artifact remain unfinished.
+- Optional clearance has not yet been implemented in the shared simulator.
+  The current constant-stress baseline is a model assumption, not a
+  measurement of the experimental exposure history.
+- Initial model states have not yet been validated against the experimental
+  galactose pre-incubation procedure.
+- No estimator uncertainty is computed. CRLB results from `ichnos-fisher`
+  are theoretical bounds under assumed measurement conditions, not
+  confidence intervals for an implemented estimator.
+- No copper/CuSO4-specific model or decoder is included.
 
 ## Known weaknesses carried over from the migrated code
 
-- `ImageSet.saturation_value` still defaults to 65535 and the CLI does not
-  pass a value from the manifest, so 8-bit saturated cells can go unflagged.
-  `image_io.saturation_value_for_file()` now returns the right value (255);
-  wiring it through `ImageSet` and the CLI is outstanding.
+- The CLI uses the instrument-profile saturation threshold unless
+  --saturation-value overrides it. Saturation is checked before RGB
+  extraction and passed to per-cell QC as a raw saturation mask.
+  The Python API still defaults ImageSet.saturation_value to 65535 for
+  compatibility with existing 16-bit workflows. API callers must supply
+  the appropriate threshold or a raw saturation mask for their images.
 - `correct.py` implements a photobleaching correction that `pipeline.py` never
   calls. Exported CSVs are **not** bleaching-corrected.
 - Flat fields are supported in the Python API but not exposed through the CLI.
 - `timepoint` is an acquisition index, not elapsed biological time.
 - `integrated_green` is a sum of pixel intensities, not a reporter
   concentration. The mapping to model observables is unresolved.
+
+## Experimental data and model alignment
+
+- The experiment specifies an initial stress addition followed by repeated
+  sampling from the same culture tubes. It does not directly measure
+  stress concentration over time.
+- A fluorescence decline alone does not establish a clearance rate.
+  Clearance must remain an explicit modelling assumption until its
+  parameter is constrained under a stated observation model.
+- Record actual stress-addition, sampling and image-acquisition times.
+  The current timepoint field is an acquisition index, not a replacement
+  for elapsed biological time.
+- Record initial dose and model variant explicitly when linking image
+  results to simulations.
+- Use a consistent ratio convention: the current image code computes
+  corrected red/green, corresponding to mCherry/GFP.
+- Repeated sampling provides culture-level time-course observations;
+  it does not track the same individual cells over time.
+- Additional observation times do not by themselves guarantee unique
+  parameter estimates. Identifiability depends on the selected parameters,
+  model observables and measurement uncertainty.
 
 ## Found in Step 4
 
@@ -109,32 +140,25 @@ open. The ones that block specific claims:
   exposure and gain, D460/50M placement, dark frames, PTC, flat fields,
   single-colour controls.** All open. Recorded as `None`, never as a default.
 
-## Open decision found during Step 1
+## Resolved morphology compatibility
 
-`segment.segment_cells()` calls
-`morphology.remove_small_objects(binary, min_size=min_size)`. In
-scikit-image 0.26 `min_size` is deprecated in favour of `max_size`, and the
-boundary semantics changed with it:
+Deprecated binary morphology calls have been replaced with erosion,
+dilation and closing using mode="ignore". This retains border handling
+for the symmetric, odd-sized disk footprints used by the pipeline.
+The image extra requires scikit-image>=0.23.
 
-| version | `min_size=N` removes |
-| --- | --- |
-| < 0.26 | objects strictly smaller than N (an N-pixel object is **kept**) |
-| 0.26 | objects of N pixels or fewer (an N-pixel object is **dropped**) |
+The minimum-object-size rule is now explicit: an object containing at
+least min_size pixels is retained.
 
-Verified on 0.26: a single 5-pixel object is removed by both `min_size=5` and
-`max_size=5`, and kept by `max_size=4`.
+The compatibility helper uses max_size=min_size-1 when the new API is
+available, and min_size on older supported versions.
 
-So the segmentation already changed by one pixel of threshold when
-scikit-image was upgraded, silently. The call has deliberately **not** been
-migrated yet, because the two possible replacements are not equivalent:
+This restores the intended minimum-size rule. Compared with the observed
+deprecated-call behaviour in scikit-image 0.26.0, objects exactly at the
+threshold may now be retained.
 
-- `max_size=min_size` preserves today's (0.26) behaviour;
-- `max_size=min_size - 1` preserves the original intent of the `min_size`
-  argument ("keep objects of at least this size").
-
-This needs a decision, a pinned scikit-image version, and a regression test
-on a fixed scene before it is changed. Until then the deprecation warning is
-left in place as the visible reminder.
+Regression tests cover objects below, at and above the threshold.
+The complete test suite passes with FutureWarnings treated as errors.
 
 ## Licensing
 

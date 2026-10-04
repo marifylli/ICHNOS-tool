@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 import libsbml
+import math
 
 from . import naming
 from .config import model_path
@@ -30,8 +31,16 @@ from .config import model_path
 PARAMETERS_FILE = "parameters.yaml"
 
 #: Values that `status` may take. See parameters.yaml for what each means.
-VALID_STATUSES = ("fitted", "swept", "non_identifiable", "inherited", "measured")
-
+VALID_STATUSES = (
+    "fitted",
+    "fit_summary",
+    "swept",
+    "model_convention",
+    "literature_derived",
+    "non_identifiable",
+    "inherited",
+    "measured",
+)
 
 class ProfileError(ValueError):
     """The requested profile does not exist, or is not applicable as given."""
@@ -44,6 +53,25 @@ class IncompleteProfileError(ProfileError):
 class GovernedParameterError(ProfileError):
     """The profile tries to set a quantity that a rule governs."""
 
+class InvalidParameterValueError(ProfileError):
+    """A parameter value is outside the supported domain."""
+
+
+class UnitMismatchError(ProfileError):
+    """Profile units do not match the SBML unit identifier."""
+
+
+STRICTLY_POSITIVE_PARAMETERS = {
+    "K_R",
+    "Kd_TIP_TetR",
+    "K_act_ox",
+    "K_act_er",
+    "n",
+    "n_ox",
+    "n_er",
+    "f",
+    "eps",
+}
 
 @dataclass(frozen=True)
 class ParameterEntry:
@@ -53,6 +81,41 @@ class ParameterEntry:
     status: str
     source: Optional[str]
     note: Optional[str] = None
+
+    def __post_init__(self):
+        if isinstance(self.value, bool):
+            raise InvalidParameterValueError(
+                f"{self.name}: booleans are not parameter values"
+            )
+
+        try:
+            value = float(self.value)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise InvalidParameterValueError(
+                f"{self.name}: value must be numeric"
+            ) from exc
+
+        if not math.isfinite(value) or value < 0:
+            raise InvalidParameterValueError(
+                f"{self.name}: value must be finite and non-negative"
+            )
+
+        if self.name in STRICTLY_POSITIVE_PARAMETERS and value <= 0:
+            raise InvalidParameterValueError(
+                f"{self.name}: value must be strictly positive"
+            )
+
+        if self.name in {"E", "P_min"} and value > 1:
+            raise InvalidParameterValueError(
+                f"{self.name}: value must be between 0 and 1"
+            )
+
+        if not isinstance(self.units, str) or not self.units.strip():
+            raise UnitMismatchError(
+                f"{self.name}: units must be explicitly specified"
+            )
+
+        object.__setattr__(self, "value", value)
 
     @property
     def has_recorded_origin(self) -> bool:
@@ -122,8 +185,8 @@ def load_profile(variant: str, name: str = "default") -> Profile:
             )
         entries[param_name] = ParameterEntry(
             name=param_name,
-            value=float(spec["value"]),
-            units=spec.get("units", "dimensionless"),
+            value=spec["value"],
+            units=spec.get("units"),
             status=status,
             source=spec.get("source"),
             note=spec.get("note"),
@@ -151,6 +214,48 @@ def free_parameter_names(model: libsbml.Model) -> set[str]:
         if p.getId() not in governed
     }
 
+def _checked_parameter(
+    model: libsbml.Model,
+    name: str,
+    entry: ParameterEntry,
+):
+    if name != entry.name:
+        raise ProfileError(
+            f"profile key {name!r} differs from "
+            f"entry name {entry.name!r}"
+        )
+
+    param_id = naming.resolve_id(
+        model, name, kinds=("parameter",)
+    )
+
+    governed = (
+        set(naming.rule_targets(model))
+        | naming.initial_assignment_targets(model)
+    )
+
+    if param_id in governed:
+        raise GovernedParameterError(
+            f"{name} is governed by a rule or initial assignment"
+        )
+
+    parameter = model.getParameter(param_id)
+
+    if not parameter.isSetUnits():
+        raise UnitMismatchError(
+            f"{name}: SBML units are unspecified"
+        )
+
+    expected = parameter.getUnits()
+
+    if entry.units != expected:
+        raise UnitMismatchError(
+            f"{name}: profile units {entry.units!r} differ from "
+            f"SBML units {expected!r}; "
+            "no automatic conversion is performed"
+        )
+
+    return parameter
 
 def check_profile_against_model(profile: Profile, model: libsbml.Model) -> None:
     """Raise unless the profile is a complete, applicable configuration.
@@ -196,26 +301,31 @@ def check_profile_against_model(profile: Profile, model: libsbml.Model) -> None:
             f"profile {profile.variant}/{profile.name} names "
             f"{sorted(truly_unknown)}, which this model does not have"
         )
+        for name, entry in profile.parameters.items():
+            _checked_parameter(model, name, entry)
 
 
-def apply_profile(model: libsbml.Model, profile: Profile, *, check: bool = True) -> None:
-    """Write the profile's values into `model`, in place.
+def apply_profile(
+    model: libsbml.Model,
+    profile: Profile,
+    *,
+    check: bool = True,
+) -> None:
+    """Validate all supplied entries before writing parameter values.
 
-    Resolution is by name through ichnos.naming, so a missing or ambiguous
-    name raises rather than quietly skipping a parameter.
+    check=False skips completeness checks only. Units and governed
+    targets are still checked for every supplied entry.
     """
     if check:
         check_profile_against_model(profile, model)
 
-    governed = set(naming.rule_targets(model)) | naming.initial_assignment_targets(model)
-    for entry in profile.parameters.values():
-        param_id = naming.resolve_id(model, entry.name, kinds=("parameter",))
-        if param_id in governed:
-            raise GovernedParameterError(
-                f"{entry.name} is governed by a rule or initial assignment and "
-                "must not be set by a profile"
-            )
-        model.getParameter(param_id).setValue(entry.value)
+    updates = [
+        (_checked_parameter(model, name, entry), entry.value)
+        for name, entry in profile.parameters.items()
+    ]
+
+    for parameter, value in updates:
+        parameter.setValue(value)
 
 
 def describe(profile: Profile) -> str:

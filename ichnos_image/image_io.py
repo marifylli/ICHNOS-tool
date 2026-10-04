@@ -171,3 +171,22 @@ def plane_for_channel(
     return extract_fluorescence_plane(
         image, method=method, cube=instrument.CUBE_FOR_CHANNEL[channel]
     )
+
+
+def saturation_mask_for_image(
+    image: np.ndarray,
+    saturation_value: float,
+) -> np.ndarray:
+    """Check clipping in the stored image, before RGB extraction."""
+    if not np.isfinite(saturation_value) or saturation_value <= 0:
+        raise ValueError("saturation_value must be finite and positive")
+
+    arr = np.asarray(image)
+
+    if arr.ndim == 2:
+        return arr >= saturation_value
+
+    if arr.ndim == 3 and arr.shape[-1] in (3, 4):
+        return np.any(arr[..., :3] >= saturation_value, axis=-1)
+
+    raise ValueError(f"unsupported image shape: {arr.shape}")

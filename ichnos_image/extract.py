@@ -9,7 +9,8 @@ from dataclasses import dataclass
 
 import numpy as np
 from skimage.measure import regionprops
-from skimage.morphology import binary_dilation, binary_erosion, disk
+from skimage.morphology import dilation, erosion, disk
+
 
 
 @dataclass
@@ -37,6 +38,7 @@ def extract_per_cell(
     erosion_px: int = 1,
     annulus_width_px: int = 3,
     subtract_local_background: bool = True,
+    raw_saturation_mask: np.ndarray | None = None,
 ) -> list[CellFeatures]:
     """Per-cell mean/integrated intensity (Stage 5).
 
@@ -79,7 +81,15 @@ def extract_per_cell(
     saturation_value=CAMERA_SC30_SATURATION_VALUE explicitly for real
     Olympus/SC30 data rather than relying on this default.
     """
-    if saturation_value is None:
+    if raw_saturation_mask is not None:
+        if raw_saturation_mask.shape != label_mask.shape:
+            raise ValueError(
+                "raw_saturation_mask must match label_mask shape"
+            )
+        if raw_saturation_mask.dtype != np.bool_:
+            raise ValueError("raw_saturation_mask must be boolean")
+
+    if raw_saturation_mask is None and saturation_value is None:
         if not np.issubdtype(raw_green.dtype, np.integer):
             raise ValueError(
                 "saturation_value must be given explicitly for a non-integer raw_green "
@@ -92,7 +102,11 @@ def extract_per_cell(
         cell_id = int(region.label)
         mask = label_mask == cell_id
 
-        measure_mask = binary_erosion(mask, disk(erosion_px)) if erosion_px > 0 else mask
+        measure_mask = (
+            erosion(mask, disk(erosion_px), mode="ignore")
+            if erosion_px > 0
+            else mask
+        )
         if not measure_mask.any():
             measure_mask = mask  # too small to erode -- fall back to the full cell
 
@@ -101,8 +115,16 @@ def extract_per_cell(
 
         local_bg_g = local_bg_r = 0.0
         if subtract_local_background:
-            outer = binary_dilation(mask, disk(erosion_px + annulus_width_px))
-            inner = binary_dilation(mask, disk(erosion_px))
+            outer = dilation(
+                mask,
+                disk(erosion_px + annulus_width_px),
+                mode="ignore",
+            )
+            inner = dilation(
+                mask,
+                disk(erosion_px),
+                mode="ignore",
+            )
             annulus = outer & ~inner & (label_mask == 0)  # exclude other cells' territory too
             if annulus.any():
                 local_bg_g = float(np.median(corrected_green[annulus]))
@@ -110,7 +132,15 @@ def extract_per_cell(
                 corr_g = np.clip(corr_g - local_bg_g, 0, None)
                 corr_r = np.clip(corr_r - local_bg_r, 0, None)
 
-        sat = bool((raw_g >= saturation_value).any() or (raw_r >= saturation_value).any())
+
+
+        if raw_saturation_mask is not None:
+            sat = bool(raw_saturation_mask[mask].any())
+        else:
+            sat = bool(
+                (raw_green[mask] >= saturation_value).any()
+                or (raw_red[mask] >= saturation_value).any()
+            )
         features.append(
             CellFeatures(
                 cell_id=cell_id,
