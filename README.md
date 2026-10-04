@@ -24,7 +24,7 @@ Migrated code and model sources are recorded in
 | Shared simulator (`ichnos.simulate`) | Implemented with solver settings and observable selections |
 | Parameter profiles (`ichnos.params`) | Packaged; value, unit and provenance checks implemented |
 | Model exports (`ichnos.io`) | Unique archives with manifests and overwrite protection |
-| Experimental exposure protocol | Constant-stress baseline; clearance support pending |
+| Experimental exposure protocol | Constant-stress baseline and optional first-order clearance with an explicit rate in h^-1; observation times supplied in hours; computational equilibration or explicit finite preincubation with initialization assumptions recorded | |
 | Measurement mapping and session calibration | Not complete |
 | Calibration artifact and decoder | Not implemented |
 | Estimator uncertainty | Not implemented |
@@ -64,7 +64,8 @@ that those choices have been experimentally calibrated.
 
 1. Align experimental metadata with the simulator: variant, initial dose,
    actual elapsed times, exposure history and initial model state.
-2. Add optional clearance with explicit assumptions and parameter provenance.
+2. Evaluate the exposure assumption and constrain clearance rates using
+   experimental data; no experimentally calibrated clearance default exists.
 3. Implement the mapping from model observables to measured fluorescence,
    session calibration and population grouping.
 4. Build a calibration artifact and decoder for one known variant.
