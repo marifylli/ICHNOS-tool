@@ -111,7 +111,9 @@ def _segment_otsu(bf_image: np.ndarray, min_size: int = 30) -> np.ndarray:
 
     # edges alone are a ring, not a filled cell -- close small gaps in the
     # ring then fill it completely (not just small holes) to get solid masks
-    binary = morphology.binary_closing(binary, morphology.disk(3))
+    binary = morphology.closing(
+    binary, morphology.disk(3), mode="ignore"
+    )
     binary = ndi.binary_fill_holes(binary)
     binary = morphology.remove_small_objects(binary, min_size=min_size)
 

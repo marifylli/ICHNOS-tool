@@ -9,7 +9,8 @@ from dataclasses import dataclass
 
 import numpy as np
 from skimage.measure import regionprops
-from skimage.morphology import binary_dilation, binary_erosion, disk
+from skimage.morphology import dilation, erosion, disk
+
 
 
 @dataclass
@@ -101,7 +102,11 @@ def extract_per_cell(
         cell_id = int(region.label)
         mask = label_mask == cell_id
 
-        measure_mask = binary_erosion(mask, disk(erosion_px)) if erosion_px > 0 else mask
+        measure_mask = (
+            erosion(mask, disk(erosion_px), mode="ignore")
+            if erosion_px > 0
+            else mask
+        )
         if not measure_mask.any():
             measure_mask = mask  # too small to erode -- fall back to the full cell
 
@@ -110,8 +115,16 @@ def extract_per_cell(
 
         local_bg_g = local_bg_r = 0.0
         if subtract_local_background:
-            outer = binary_dilation(mask, disk(erosion_px + annulus_width_px))
-            inner = binary_dilation(mask, disk(erosion_px))
+            outer = dilation(
+                mask,
+                disk(erosion_px + annulus_width_px),
+                mode="ignore",
+            )
+            inner = dilation(
+                mask,
+                disk(erosion_px),
+                mode="ignore",
+            )
             annulus = outer & ~inner & (label_mask == 0)  # exclude other cells' territory too
             if annulus.any():
                 local_bg_g = float(np.median(corrected_green[annulus]))
