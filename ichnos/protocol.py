@@ -1,28 +1,19 @@
-"""What is done to the cells, and when: pre-equilibration, stress onset, and
-whether the stress clears.
+"""Stress exposure and model initialization before stress onset.
 
-Two things here exist because getting them wrong is invisible in the output.
+Initialization starts from the source SBML initial conditions.
+The default workflow checks convergence of selected readouts during
+a zero-stress interval. This is a computational equilibrium assumption,
+not evidence of an experimentally equilibrated culture.
 
-First, every state in the source SBML starts at zero. A run from those initial
-conditions is a model starting from nothing, not a culture at baseline, and
-its early transient is an artifact of the initial condition rather than a
-response to stress. So a protocol pre-equilibrates at zero stress first, and
-records how long it ran and what convergence criterion it met -- a fixed
-duration is not evidence of convergence, and what equilibrates in 50 h under
-one parameter profile may not under another.
+Finite preincubation is available as a separate assumed scenario.
+The model does not explicitly represent glucose-to-galactose switching.
 
-The baseline merged models contain constant stress parameters.
-Optional first-order clearance is added to a fresh model only when the
-protocol supplies an explicit positive rate in inverse hours.
-Protocol execution checks that the loaded stress law agrees with this
-choice. No experimentally calibrated clearance default is supplied.
-
-After pre-equilibration, time is reported relative to stress onset. That is
-the `t` a decoder estimates.
+Stress is constant unless an explicit first-order clearance rate is
+supplied. Post-stress time is reported in hours from stress onset.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Optional
 
 import libsbml
@@ -321,6 +312,22 @@ def _record_exposure(result, protocol: StressProtocol) -> None:
         ),
     }
 
+def _record_initialization(
+    result,
+    preparation: Equilibration,
+    *,
+    method: str,
+) -> None:
+    result.initialization = {
+        "method": method,
+        "starting_state": "source_sbml",
+        "zero_stress_duration_hours": preparation.horizon_hours,
+        "observables_converged": preparation.converged,
+        "criterion": preparation.criterion,
+        "max_relative_drift": preparation.max_relative_drift,
+        "observables_checked": list(preparation.observables_checked),
+        "experimental_initial_state_validated": False,
+    }
 
 def equilibrate(
     runner,
@@ -426,6 +433,15 @@ def run_protocol(
         reset=False,
     )
     _record_exposure(result, protocol)
+    _record_initialization(
+        result,
+        equilibration,
+        method=(
+            "equilibrium_assumption"
+            if require_equilibrium
+            else "unchecked_baseline"
+        ),
+    )
     return result, equilibration
 
 def run_protocol_at_times(
@@ -456,4 +472,80 @@ def run_protocol_at_times(
         reset=False,
     )
     _record_exposure(result, protocol)
+    _record_initialization(
+        result,
+        equilibration,
+        method=(
+            "equilibrium_assumption"
+            if require_equilibrium
+            else "unchecked_baseline"
+        ),
+    )
     return result, equilibration
+
+def run_protocol_after_preincubation(
+    runner,
+    protocol: StressProtocol,
+    *,
+    preincubation_hours,
+    times_hours,
+    id_to_name: Optional[dict[str, str]] = None,
+) -> tuple[sim.SimulationResult, Equilibration]:
+    """Run finite zero-stress preparation from source SBML initial conditions.
+
+    This is an assumed scenario, not a validated experimental initial state.
+    Convergence is reported but is not required.
+    """
+    if isinstance(preincubation_hours, (bool, np.bool_)):
+        raise ProtocolError(
+            "preincubation_hours must be a positive finite number"
+        )
+
+    try:
+        duration = float(preincubation_hours)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ProtocolError(
+            "preincubation_hours must be explicitly supplied in hours"
+        ) from exc
+
+    if not math.isfinite(duration) or duration <= 0:
+        raise ProtocolError(
+            "preincubation_hours must be a positive finite number"
+        )
+
+    finite_protocol = replace(
+        protocol,
+        equilibration_horizon_hours=duration,
+    )
+
+    result, preparation = run_protocol_at_times(
+        runner,
+        finite_protocol,
+        times_hours=times_hours,
+        id_to_name=id_to_name,
+        require_equilibrium=False,
+    )
+
+    _record_initialization(
+        result,
+        preparation,
+        method="finite_preincubation_assumption",
+    )
+    return result, preparation
+
+def _record_initialization(
+    result,
+    preparation: Equilibration,
+    *,
+    method: str,
+) -> None:
+    result.initialization = {
+        "method": method,
+        "starting_state": "source_sbml",
+        "zero_stress_duration_hours": preparation.horizon_hours,
+        "observables_converged": preparation.converged,
+        "criterion": preparation.criterion,
+        "max_relative_drift": preparation.max_relative_drift,
+        "observables_checked": list(preparation.observables_checked),
+        "experimental_initial_state_validated": False,
+    }

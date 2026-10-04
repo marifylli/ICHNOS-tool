@@ -59,6 +59,7 @@ class SimulationResult:
     values: np.ndarray  # (n_timepoints, n_columns), excluding time
     solver: SolverSettings
     exposure: dict | None = None
+    initialization: dict | None = None
     n_points: int = field(init=False)
 
     def __post_init__(self):
