@@ -60,6 +60,73 @@ components before fluorescence extraction.
 Explicit extraction choices are configuration options, not evidence
 that those choices have been experimentally calibrated.
 
+## Run a stress protocol
+
+Install the model dependencies in the active virtual environment:
+
+```bash
+python -m pip install -e ".[model]"
+```
+
+Run a finite zero-stress preincubation scenario followed by stress:
+
+```bash
+python scripts/run_protocol.py \
+  --variant ox \
+  --profile default \
+  --dose 75 \
+  --dose-units uM \
+  --times-hours 0.5 1 2 3 \
+  --initialization finite-preincubation \
+  --preincubation-hours 2 \
+  --out-dir outputs/ox_75uM_preincubation_2h
+```
+
+The preincubation duration is an explicit model assumption. The model
+does not represent glucose-to-galactose switching or a validated
+experimental initial state.
+
+For computational equilibration instead, use:
+
+```bash
+python scripts/run_protocol.py \
+  --variant er \
+  --profile default \
+  --dose 250 \
+  --dose-units uM \
+  --times-hours 0.75 2 4 \
+  --initialization equilibrium \
+  --out-dir outputs/er_250uM_equilibrium
+```
+
+Equilibrium mode requires convergence of the checked readouts over the
+zero-stress preparation interval. This does not establish experimental
+equilibrium or convergence of every model state.
+
+Observation times are supplied in hours from stress onset. Supply the
+actual elapsed times appropriate to the measurement, rather than assuming
+that nominal sampling times and image acquisition times are identical.
+
+Stress remains constant unless `--clearance-rate-per-hour` is supplied.
+That option requires an explicit positive finite rate in h^-1 and adds
+assumed first-order decay. No experimentally calibrated default is provided.
+
+Each run creates a new output directory containing:
+
+- `results.csv`: model outputs and `time_hours`.
+- `metadata.json`: parameter profile and provenance, exposure,
+  initialization, solver settings, runtime versions and hashes.
+- `model.sbml`: the loaded model before preparation and dose application.
+
+The recorded profile includes its original parameter values; the exposure
+metadata records the dose applied by the protocol.
+
+Existing output paths are rejected. File writes are not a single atomic
+transaction; a failed write can leave a partial output directory.
+
+These exports contain model observables, not experimentally calibrated
+fluorescence or decoder estimates.
+
 ## Next implementation steps
 
 1. Align experimental metadata with the simulator: variant, initial dose,
