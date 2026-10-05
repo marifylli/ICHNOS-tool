@@ -35,6 +35,8 @@ def build_records(
     focus_score_threshold: float = FOCUS_SCORE_THRESHOLD,
     registration_shift_threshold_px: float = REGISTRATION_SHIFT_THRESHOLD_PX,
     lamp_warmup_threshold_minutes: float = LAMP_WARMUP_THRESHOLD_MINUTES,
+    sampling_time_hours: float | None = None,
+    measurement_time_hours: float | None = None,
 ) -> list[CellRecord]:
     """Turn per-cell features + per-image acquisition/QC metadata into schema
     rows. QC flags here are image-level (focus_score, registration_shift_px)
@@ -83,6 +85,8 @@ def build_records(
             burner_hours=burner_hours,
             lamp_warmup_minutes=lamp_warmup_minutes,
             acquisition_order=acquisition_order,
+            sampling_time_hours=sampling_time_hours,
+            measurement_time_hours=measurement_time_hours,
         )
         validate(record)
         records.append(record)

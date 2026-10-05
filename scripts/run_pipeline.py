@@ -13,6 +13,11 @@ Bio-Formats via python-bioformats, not included here).
     bright_field_path (optional, blank if none), exposure_ms_green,
     exposure_ms_red, nd_filter_green, nd_filter_red, objective, burner_hours,
     lamp_warmup_minutes
+Optional timing columns:
+sampling_time_hours, measurement_time_hours
+
+Both are actual elapsed hours from stress onset. Missing values remain
+unknown. timepoint is a point identifier, not an elapsed time in hours.
 
 --controls CSV columns (one row per session_id needing crosstalk
 calibration; a session missing from this file must instead get
@@ -29,6 +34,7 @@ from skimage.color import rgb2gray
 
 import pandas as pd
 from ichnos_image.instrument import SATURATION_VALUE
+from ichnos.schema import validate_elapsed_hours
 
 from ichnos_image import ImageSet, process_experiment
 from ichnos_image.correct import calibrate_crosstalk_from_control
@@ -51,6 +57,13 @@ def _load_bright_field(path: str | Path):
 
     raise ValueError(f"unsupported bright-field shape: {image.shape}")
 
+def _optional_elapsed_hours(row, name):
+    value = getattr(row, name, None)
+    if value is None or pd.isna(value):
+        return None
+
+    return validate_elapsed_hours(value, field_name=name)
+
 def _build_image_sets(
     manifest_path: Path,
     *,
@@ -62,13 +75,19 @@ def _build_image_sets(
     image_sets = []
 
     for row in manifest.itertuples():
+        sampling_time_hours = _optional_elapsed_hours(
+        row, "sampling_time_hours"
+        )
+        measurement_time_hours = _optional_elapsed_hours(
+            row, "measurement_time_hours"
+        )
         bright_field = (
             _load_bright_field(row.bright_field_path)
             if getattr(row, "bright_field_path", "")
             and pd.notna(row.bright_field_path)
             else None
         )
-
+#
         raw_green = load_image(row.green_path)
         raw_red = load_image(row.red_path)
 
@@ -109,6 +128,8 @@ def _build_image_sets(
                 objective=str(row.objective),
                 burner_hours=float(row.burner_hours),
                 lamp_warmup_minutes=float(row.lamp_warmup_minutes),
+                sampling_time_hours=sampling_time_hours,
+                measurement_time_hours=measurement_time_hours,
             )
         )
 

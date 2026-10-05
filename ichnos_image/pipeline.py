@@ -17,6 +17,8 @@ import numpy as np
 from . import correct, export, extract, segment
 from .schema import CellRecord
 
+from ichnos.schema import validate_elapsed_hours
+
 
 class CrosstalkCalibrationWarning(UserWarning):
     """Raised when one scalar crosstalk coefficient is applied across several
@@ -47,6 +49,20 @@ class ImageSet:
     bright_field: np.ndarray | None = None  # None -> segment off the green channel instead
     saturation_value: float = 65535.0
     raw_saturation_mask: np.ndarray | None = None
+
+    sampling_time_hours: float | None = None
+    measurement_time_hours: float | None = None
+
+    def __post_init__(self):
+        for name in ("sampling_time_hours", "measurement_time_hours"):
+            setattr(
+                self,
+                name,
+                validate_elapsed_hours(
+                    getattr(self, name),
+                    field_name=name,
+                ),
+            )
 
 
 def process_image_set(
@@ -134,6 +150,8 @@ def process_image_set(
         burner_hours=image_set.burner_hours,
         lamp_warmup_minutes=image_set.lamp_warmup_minutes,
         acquisition_order=image_set.acquisition_order,
+        sampling_time_hours=image_set.sampling_time_hours,
+        measurement_time_hours=image_set.measurement_time_hours,
     )
 
 

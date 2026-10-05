@@ -16,6 +16,29 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 from typing import Optional
 
+import math
+from numbers import Real
+
+
+def validate_elapsed_hours(value, *, field_name: str) -> float | None:
+    """Optional elapsed time in hours from stress onset."""
+    if value is None:
+        return None
+
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(
+            f"{field_name} must be a finite non-negative number or None"
+        )
+
+    value = float(value)
+    if not math.isfinite(value) or value < 0:
+        raise ValueError(
+            f"{field_name} must be a finite non-negative number or None"
+        )
+
+    return value
+
+# gia pragmatikous xronous peiramatos
 
 @dataclass
 class CellRecord:
@@ -58,6 +81,9 @@ class CellRecord:
     lamp_warmup_minutes: float
     acquisition_order: int
 
+    sampling_time_hours: float | None = None
+    measurement_time_hours: float | None = None
+
 
 CSV_COLUMNS = [f.name for f in fields(CellRecord)]
 
@@ -68,3 +94,9 @@ def validate(record: CellRecord) -> None:
         raise ValueError(f"cell {record.cell_id}: non-positive area_px")
     if record.raw_mean_green < 0 or record.raw_mean_red < 0:
         raise ValueError(f"cell {record.cell_id}: negative raw intensity")
+
+    for name in ("sampling_time_hours", "measurement_time_hours"):
+        validate_elapsed_hours(
+            getattr(record, name),
+            field_name=name,
+        )
