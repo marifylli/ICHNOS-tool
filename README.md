@@ -60,6 +60,26 @@ components before fluorescence extraction.
 Explicit extraction choices are configuration options, not evidence
 that those choices have been experimentally calibrated.
 
+### Experimental timing in image manifests
+
+`timepoint` is an integer point identifier, not elapsed time.
+
+Image manifests optionally accept:
+
+- `sampling_time_hours`: actual sampling time from stress onset.
+- `measurement_time_hours`: actual measurement time from stress onset.
+
+Both fields use hours and accept fractional values, including 0.5 and 0.75.
+Missing columns or blank entries remain unknown. Supplied values must be
+finite and non-negative.
+
+The two times are preserved separately in the per-cell CSV. No automatic
+conversion between sampling and measurement time is performed.
+
+The time used for comparison with the simulator must reflect the sample
+handling protocol, including whether biological activity continues between
+sampling and imaging.
+
 ## Run a stress protocol
 
 Install the model dependencies in the active virtual environment:
