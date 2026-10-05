@@ -99,3 +99,120 @@ def test_cli_rejects_existing_output_directory(tmp_path):
     assert sorted(path.name for path in out_dir.iterdir()) == [
         "keep.txt"
     ]
+# ελεγχοι για διαδρομή υπολογιστής ισορροπίας με σταθ. στρες
+
+@pytest.mark.parametrize("variant", ["ox", "er"])
+def test_cli_equilibrium_with_constant_stress(tmp_path, variant):
+    out_dir = tmp_path / f"{variant}_equilibrium"
+    command = [
+        sys.executable,
+        str(SCRIPT),
+        "--variant", variant,
+        "--dose", "75",
+        "--dose-units", "uM",
+        "--times-hours", "0.5", "1",
+        "--initialization", "equilibrium",
+        "--out-dir", str(out_dir),
+    ]
+
+    completed = subprocess.run(
+        command,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, (
+        completed.stdout + completed.stderr
+    )
+
+    metadata = json.loads(
+        (out_dir / "metadata.json").read_text(encoding="utf-8")
+    )
+    assert metadata["exposure"]["model"] == "constant"
+    assert metadata["exposure"]["clearance_rate_per_hour"] is None
+    assert metadata["initialization"]["method"] == (
+        "equilibrium_assumption"
+    )
+    assert metadata["initialization"]["observables_converged"] is True
+
+    with (out_dir / "results.csv").open(
+        encoding="utf-8", newline=""
+    ) as handle:
+        rows = list(csv.DictReader(handle))
+
+    np.testing.assert_allclose(
+        [float(row["time_hours"]) for row in rows],
+        [0.5, 1.0],
+    )
+    np.testing.assert_allclose(
+        [float(row[f"S_{variant}"]) for row in rows],
+        75.0,
+    )
+
+
+@pytest.mark.parametrize(
+    "extra_args, expected_error",
+    [
+        (
+            ["--initialization", "finite-preincubation"],
+            "requires --preincubation-hours",
+        ),
+        (
+            [
+                "--initialization", "equilibrium",
+                "--preincubation-hours", "2",
+            ],
+            "--preincubation-hours requires finite-preincubation",
+        ),
+        (
+            [
+                "--initialization", "finite-preincubation",
+                "--preincubation-hours", "-1",
+            ],
+            "--preincubation-hours must be positive and finite",
+        ),
+        (
+            [
+                "--initialization", "equilibrium",
+                "--clearance-rate-per-hour", "0",
+            ],
+            "clearance rate must be a positive finite number",
+        ),
+        (
+            ["--initialization", "equilibrium", "--dose", "-1"],
+            "dose must be non-negative",
+        ),
+        (
+            [
+                "--initialization", "equilibrium",
+                "--times-hours", "1", "0.5",
+            ],
+            "times_hours must be strictly increasing",
+        ),
+    ],
+)
+def test_cli_invalid_inputs_create_no_output(
+    tmp_path, extra_args, expected_error
+):
+    out_dir = tmp_path / "invalid_run"
+    command = [
+        sys.executable,
+        str(SCRIPT),
+        "--variant", "ox",
+        "--dose", "75",
+        "--dose-units", "uM",
+        "--times-hours", "0.5", "1",
+        "--out-dir", str(out_dir),
+        *extra_args,
+    ]
+
+    completed = subprocess.run(
+        command,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode != 0
+    assert expected_error in completed.stderr
+    assert not out_dir.exists()
