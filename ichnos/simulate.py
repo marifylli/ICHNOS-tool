@@ -58,6 +58,8 @@ class SimulationResult:
     columns: list[str]
     values: np.ndarray  # (n_timepoints, n_columns), excluding time
     solver: SolverSettings
+    exposure: dict | None = None
+    initialization: dict | None = None
     n_points: int = field(init=False)
 
     def __post_init__(self):
@@ -175,6 +177,85 @@ def simulate(
         solver=read_solver_settings(runner),
     )
 
+def validate_observation_times(times_hours) -> np.ndarray:
+    """Finite, increasing observation times in hours after onset."""
+    try:
+        raw = np.asarray(times_hours, dtype=object)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "times_hours must be a one-dimensional sequence"
+        ) from exc
+
+    if raw.ndim != 1 or raw.size == 0:
+        raise ValueError(
+            "times_hours must be a non-empty one-dimensional sequence"
+        )
+
+    if any(isinstance(value, (bool, np.bool_)) for value in raw):
+        raise ValueError("times_hours must not contain booleans")
+
+    try:
+        times = raw.astype(float)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(
+            "times_hours must contain finite numbers"
+        ) from exc
+
+    if not np.isfinite(times).all():
+        raise ValueError("times_hours must contain finite numbers")
+
+    if (times < 0).any():
+        raise ValueError("times_hours must be non-negative")
+
+    if (np.diff(times) <= 0).any():
+        raise ValueError("times_hours must be strictly increasing")
+
+    if times[-1] <= 0:
+        raise ValueError(
+            "times_hours must include at least one positive time"
+        )
+
+    return times
+
+
+def simulate_at_times(
+    runner,
+    *,
+    times_hours,
+    id_to_name: Optional[dict[str, str]] = None,
+    solver: Optional[SolverSettings] = None,
+    reset: bool = True,
+) -> SimulationResult:
+    """Simulate from onset and return only the requested observation times.
+
+    With reset=False, preserve the current state and treat it as the state
+    at onset. This allows continuation from a pre-equilibrated baseline.
+    """
+    times = validate_observation_times(times_hours)
+    includes_onset = times[0] == 0.0
+    output_times = (
+        times if includes_onset else np.concatenate(([0.0], times))
+    )
+
+    if reset:
+        runner.reset()
+
+    if solver is not None:
+        apply_solver_settings(runner, solver)
+
+    raw = runner.simulate(times=output_times.tolist())
+    columns = _readable_columns(raw.colnames, id_to_name or {})
+    array = np.asarray(raw)
+
+    if not includes_onset:
+        array = array[1:]
+
+    return SimulationResult(
+        time=array[:, 0].copy(),
+        columns=columns[1:],
+        values=array[:, 1:].copy(),
+        solver=read_solver_settings(runner),
+    )
 
 def peak_summary(result: SimulationResult, names: tuple[str, ...]) -> list[dict]:
     """Peak, time-to-peak and plateau for the named observables.

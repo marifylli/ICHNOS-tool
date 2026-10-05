@@ -8,7 +8,7 @@ Things this repository does **not** do, and claims it must not make.
   dose or elapsed-time estimates.
 - Measurement mapping, complete session calibration and a decoder
   calibration artifact remain unfinished.
-- Optional clearance has not yet been implemented in the shared simulator.
+- Optional first-order clearance is implemented, but its rate has not been experimentally calibrated. Constant stress remains an available baseline.
   The current constant-stress baseline is a model assumption, not a
   measurement of the experimental exposure history.
 - Initial model states have not yet been validated against the experimental
@@ -32,6 +32,44 @@ Things this repository does **not** do, and claims it must not make.
 - `timepoint` is an acquisition index, not elapsed biological time.
 - `integrated_green` is a sum of pixel intensities, not a reporter
   concentration. The mapping to model observables is unresolved.
+
+## Exposure model and clearance decision
+
+The simulator supports two explicit exposure assumptions:
+
+- Constant stress: clears=False, with no clearance rate supplied.
+- First-order decay: clears=True, with an explicitly supplied positive,
+  finite clearance_rate_per_hour in h^-1.
+
+For first-order decay, dS/dt = -k_clear * S, so
+S(t) = S0 * exp(-k_clear * t). Dose is expressed in uM and numerical
+simulation time in hours.
+
+Clearance is optional because the experiment measures fluorescence,
+not stress concentration over time. A single initial addition does not
+determine the subsequent concentration trajectory or its decay rate.
+Fluorescence dynamics alone do not establish a unique clearance rate.
+
+No numerical clearance default is supplied: an arbitrary value would
+change predictions without experimental support. The constant-stress
+baseline is retained for comparison; it is also an assumption, not
+evidence that stress remains constant.
+
+Existing parameter profiles are not automatically recalibrated when
+clearance is enabled. Predictions under clearance remain conditional on
+the selected rate, parameter profile and observation model.
+
+load_protocol_model prepares a fresh model for the requested exposure.
+Protocol execution rejects a loaded stress law that disagrees with the
+requested configuration. Simulation results record exposure metadata.
+
+Observation times are supplied explicitly in hours after stress onset.
+The simulation includes the interval from onset to the first observation,
+even when the first requested observation occurs later than zero.
+
+Synthetic clearance rates used in tests verify implementation behaviour;
+they are not recommended experimental values.
+
 
 ## Experimental data and model alignment
 

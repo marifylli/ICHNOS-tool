@@ -1,31 +1,24 @@
-"""What is done to the cells, and when: pre-equilibration, stress onset, and
-whether the stress clears.
+"""Stress exposure and model initialization before stress onset.
 
-Two things here exist because getting them wrong is invisible in the output.
+Initialization starts from the source SBML initial conditions.
+The default workflow checks convergence of selected readouts during
+a zero-stress interval. This is a computational equilibrium assumption,
+not evidence of an experimentally equilibrated culture.
 
-First, every state in the source SBML starts at zero. A run from those initial
-conditions is a model starting from nothing, not a culture at baseline, and
-its early transient is an artifact of the initial condition rather than a
-response to stress. So a protocol pre-equilibrates at zero stress first, and
-records how long it ran and what convergence criterion it met -- a fixed
-duration is not evidence of convergence, and what equilibrates in 50 h under
-one parameter profile may not under another.
+Finite preincubation is available as a separate assumed scenario.
+The model does not explicitly represent glucose-to-galactose switching.
 
-Second, the merged model as it stands has NO clearance rule: `S_ox` and
-`S_er` are constant parameters, so stress never decays. Adding clearance is a
-change to the model, not a setting, and `add_clearance()` below refuses to add
-a second rule for a quantity that already has one.
-
-After pre-equilibration, time is reported relative to stress onset. That is
-the `t` a decoder estimates.
+Stress is constant unless an explicit first-order clearance rate is
+supplied. Post-stress time is reported in hours from stress onset.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Optional
 
 import libsbml
 import numpy as np
+import math
 
 from . import naming, simulate as sim
 
@@ -65,12 +58,11 @@ class Equilibration:
 
 @dataclass(frozen=True)
 class StressProtocol:
-    """A bolus applied at onset, held at a constant level thereafter.
+    """Initial stress dose with constant or assumed first-order exposure.
 
-    `clears` is False for the model as it stands. A decoder calibrated under
-    this protocol estimates the initial bolus dose and the time since onset;
-    it does not distinguish an unknown bolus from continuous exposure or from
-    repeated pulses without further information.
+    Dose is in uM and numerical model time is in hours.
+    Clearance requires an explicitly supplied positive rate in h^-1.
+    This exposure assumption is not an experimental calibration.
     """
 
     variant: str
@@ -80,12 +72,94 @@ class StressProtocol:
     equilibration_horizon_hours: float = 50.0
     equilibration_tolerance: float = 1e-6
     solver: sim.SolverSettings = field(default_factory=sim.SolverSettings)
+    clearance_rate_per_hour: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.variant not in STRESS_PARAMETER:
+            raise ProtocolError(
+                f"unsupported variant: {self.variant!r}"
+            )
+
+        if self.dose_units != "uM":
+            raise ProtocolError(
+                "dose_units must be 'uM'; convert the dose explicitly "
+                "before creating the protocol"
+            )
+
+        if not isinstance(self.clears, bool):
+            raise ProtocolError("clears must be a boolean")
+
+        if self.clears:
+            object.__setattr__(
+                self,
+                "clearance_rate_per_hour",
+                _positive_clearance_rate(
+                    self.clearance_rate_per_hour
+                ),
+            )
+        elif self.clearance_rate_per_hour is not None:
+            raise ProtocolError(
+                "clearance_rate_per_hour requires clears=True"
+            )
+
+        numeric_fields = (
+            ("dose", False),
+            ("equilibration_horizon_hours", True),
+            ("equilibration_tolerance", True),
+        )
+
+        for name, strictly_positive in numeric_fields:
+            raw_value = getattr(self, name)
+
+            if isinstance(raw_value, (bool, np.bool_)):
+                raise ProtocolError(f"{name} must be a number")
+
+            try:
+                value = float(raw_value)
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise ProtocolError(
+                    f"{name} must be a finite number"
+                ) from exc
+
+            if not math.isfinite(value):
+                raise ProtocolError(
+                    f"{name} must be a finite number"
+                )
+
+            if strictly_positive and value <= 0:
+                raise ProtocolError(f"{name} must be positive")
+
+            if not strictly_positive and value < 0:
+                raise ProtocolError(
+                    f"{name} must be non-negative"
+                )
+
+            object.__setattr__(self, name, value)
 
     def stress_parameter(self) -> str:
         if self.variant not in STRESS_PARAMETER:
             raise ProtocolError(f"no stress parameter recorded for variant {self.variant!r}")
         return STRESS_PARAMETER[self.variant]
 
+def _positive_clearance_rate(value) -> float:
+    if isinstance(value, (bool, np.bool_)):
+        raise ProtocolError(
+            "clearance rate must be a positive finite number in h^-1"
+        )
+
+    try:
+        rate = float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ProtocolError(
+            "clearance rate must be explicitly supplied in h^-1"
+        ) from exc
+
+    if not math.isfinite(rate) or rate <= 0:
+        raise ProtocolError(
+            "clearance rate must be a positive finite number in h^-1"
+        )
+
+    return rate
 
 def has_rule_for(model: libsbml.Model, name: str) -> bool:
     """Whether a rule already governs the named quantity."""
@@ -93,39 +167,167 @@ def has_rule_for(model: libsbml.Model, name: str) -> bool:
     return target_id is not None and target_id in naming.rule_targets(model)
 
 
-def add_clearance(model: libsbml.Model, variant: str, rate_per_hour: float) -> None:
-    """Add dS/dt = -k * S for the variant's stress input.
-
-    Guarded on purpose. The original helper in the research code assumed the
-    stress parameter had no rule, which held for the models it ran against and
-    stops holding the moment one gains a rule. A second rule for the same
-    variable is invalid SBML, and if it were accepted it would change the
-    input dynamics with no visible sign.
-
-    This changes the model. It belongs with a parameter profile that was
-    determined under clearance -- bolting it onto a profile fitted without it
-    produces a configuration nobody has checked.
-    """
+def add_clearance(
+    model: libsbml.Model,
+    variant: str,
+    rate_per_hour: float,
+) -> None:
+    """Add assumed first-order stress decay; numerical time is hours."""
+    rate = _positive_clearance_rate(rate_per_hour)
     name = STRESS_PARAMETER.get(variant)
+
     if name is None:
-        raise ProtocolError(f"no stress parameter recorded for variant {variant!r}")
+        raise ProtocolError(f"unsupported variant: {variant!r}")
+
     if has_rule_for(model, name):
         raise DuplicateRuleError(
-            f"{name} already has a rule; refusing to add a second one. "
-            "If clearance is meant to replace the existing rule, remove that "
-            "rule explicitly."
+            f"{name} already has a rule"
         )
 
-    param_id = naming.resolve_id(model, name, kinds=("parameter",))
-    model.getParameter(param_id).setConstant(False)
+    param_id = naming.resolve_id(
+        model, name, kinds=("parameter",)
+    )
 
+    if model.getInitialAssignmentBySymbol(param_id) is not None:
+        raise ProtocolError(
+            f"{name} has an initial assignment; resolve it first"
+        )
+
+    expression = libsbml.parseL3Formula(
+        f"-{rate!r} * {param_id}"
+    )
+    if expression is None:
+        raise ProtocolError("could not parse the clearance rate law")
+
+    model.getParameter(param_id).setConstant(False)
     rule = model.createRateRule()
     rule.setVariable(param_id)
-    math = libsbml.parseL3Formula(f"-{rate_per_hour} * {param_id}")
-    if math is None:
-        raise ProtocolError("could not parse the clearance rate law")
-    rule.setMath(math)
+    rule.setMath(expression)
 
+def load_protocol_model(
+    sbml_string: str,
+    protocol: StressProtocol,
+):
+    """Load a fresh model with the requested exposure assumption."""
+    document = libsbml.readSBMLFromString(sbml_string)
+    model = document.getModel()
+
+    if model is None:
+        raise ProtocolError("SBML contains no model")
+
+    stress_id = naming.resolve_id(
+        model,
+        protocol.stress_parameter(),
+        kinds=("parameter",),
+    )
+
+    if has_rule_for(model, protocol.stress_parameter()):
+        raise DuplicateRuleError(
+            "input SBML already governs stress; "
+            "supply the baseline model"
+        )
+
+    if not model.getParameter(stress_id).getConstant():
+        raise ProtocolError(
+            "baseline stress parameter must be constant"
+        )
+
+    if protocol.clears:
+        add_clearance(
+            model,
+            protocol.variant,
+            protocol.clearance_rate_per_hour,
+        )
+
+    prepared_sbml = libsbml.writeSBMLToString(document)
+    runner = sim.load_model(
+        prepared_sbml,
+        solver=protocol.solver,
+        model=model,
+    )
+    return runner, model.clone()
+
+
+def _check_runner_exposure(
+    runner,
+    protocol: StressProtocol,
+) -> None:
+    document = libsbml.readSBMLFromString(
+        runner.getCurrentSBML()
+    )
+    model = document.getModel()
+
+    if model is None:
+        raise ProtocolError("runner contains no SBML model")
+
+    stress_id = naming.resolve_id(
+        model,
+        protocol.stress_parameter(),
+        kinds=("parameter",),
+    )
+    parameter = model.getParameter(stress_id)
+    rule = model.getRuleByVariable(stress_id)
+
+    if not protocol.clears:
+        if rule is not None or not parameter.getConstant():
+            raise ProtocolError(
+                "constant exposure requested but loaded "
+                "stress is not constant"
+            )
+        return
+
+    if (
+        rule is None
+        or not rule.isRate()
+        or parameter.getConstant()
+    ):
+        raise ProtocolError(
+            "clearance requested but no compatible rate rule is loaded"
+        )
+
+    expected = libsbml.parseL3Formula(
+        f"-{protocol.clearance_rate_per_hour!r} * {stress_id}"
+    )
+    if (
+        libsbml.formulaToL3String(rule.getMath())
+        != libsbml.formulaToL3String(expected)
+    ):
+        raise ProtocolError(
+            "loaded clearance law differs from the protocol; "
+            "use load_protocol_model"
+        )
+
+
+def _record_exposure(result, protocol: StressProtocol) -> None:
+    result.exposure = {
+        "variant": protocol.variant,
+        "initial_dose": protocol.dose,
+        "dose_units": protocol.dose_units,
+        "time_units": "hour",
+        "model": (
+            "first_order_decay" if protocol.clears else "constant"
+        ),
+        "clearance_rate_per_hour": (
+            protocol.clearance_rate_per_hour
+        ),
+    }
+
+def _record_initialization(
+    result,
+    preparation: Equilibration,
+    *,
+    method: str,
+) -> None:
+    result.initialization = {
+        "method": method,
+        "starting_state": "source_sbml",
+        "zero_stress_duration_hours": preparation.horizon_hours,
+        "observables_converged": preparation.converged,
+        "criterion": preparation.criterion,
+        "max_relative_drift": preparation.max_relative_drift,
+        "observables_checked": list(preparation.observables_checked),
+        "experimental_initial_state_validated": False,
+    }
 
 def equilibrate(
     runner,
@@ -143,6 +345,7 @@ def equilibrate(
     Convergence is judged on the relative change over the last tenth of the
     run, not on having run for a particular length of time.
     """
+    _check_runner_exposure(runner, protocol)
     stress_name = protocol.stress_parameter()
 
     runner.reset()
@@ -229,4 +432,120 @@ def run_protocol(
         solver=protocol.solver,
         reset=False,
     )
+    _record_exposure(result, protocol)
+    _record_initialization(
+        result,
+        equilibration,
+        method=(
+            "equilibrium_assumption"
+            if require_equilibrium
+            else "unchecked_baseline"
+        ),
+    )
     return result, equilibration
+
+def run_protocol_at_times(
+    runner,
+    protocol: StressProtocol,
+    *,
+    times_hours,
+    id_to_name: Optional[dict[str, str]] = None,
+    require_equilibrium: bool = True,
+) -> tuple[sim.SimulationResult, Equilibration]:
+    """Pre-equilibrate, apply stress and observe at specified onset times."""
+    # Validate before changing the runner.
+    times = sim.validate_observation_times(times_hours)
+
+    equilibration = equilibrate(
+        runner, protocol, id_to_name=id_to_name
+    )
+    if require_equilibrium:
+        equilibration.require_converged()
+
+    apply_stress(runner, protocol, id_to_name=id_to_name)
+
+    result = sim.simulate_at_times(
+        runner,
+        times_hours=times,
+        id_to_name=id_to_name,
+        solver=protocol.solver,
+        reset=False,
+    )
+    _record_exposure(result, protocol)
+    _record_initialization(
+        result,
+        equilibration,
+        method=(
+            "equilibrium_assumption"
+            if require_equilibrium
+            else "unchecked_baseline"
+        ),
+    )
+    return result, equilibration
+
+def run_protocol_after_preincubation(
+    runner,
+    protocol: StressProtocol,
+    *,
+    preincubation_hours,
+    times_hours,
+    id_to_name: Optional[dict[str, str]] = None,
+) -> tuple[sim.SimulationResult, Equilibration]:
+    """Run finite zero-stress preparation from source SBML initial conditions.
+
+    This is an assumed scenario, not a validated experimental initial state.
+    Convergence is reported but is not required.
+    """
+    if isinstance(preincubation_hours, (bool, np.bool_)):
+        raise ProtocolError(
+            "preincubation_hours must be a positive finite number"
+        )
+
+    try:
+        duration = float(preincubation_hours)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ProtocolError(
+            "preincubation_hours must be explicitly supplied in hours"
+        ) from exc
+
+    if not math.isfinite(duration) or duration <= 0:
+        raise ProtocolError(
+            "preincubation_hours must be a positive finite number"
+        )
+
+    finite_protocol = replace(
+        protocol,
+        equilibration_horizon_hours=duration,
+    )
+
+    result, preparation = run_protocol_at_times(
+        runner,
+        finite_protocol,
+        times_hours=times_hours,
+        id_to_name=id_to_name,
+        require_equilibrium=False,
+    )
+
+    _record_initialization(
+        result,
+        preparation,
+        method="finite_preincubation_assumption",
+    )
+    return result, preparation
+
+def _record_initialization(
+    result,
+    preparation: Equilibration,
+    *,
+    method: str,
+) -> None:
+    result.initialization = {
+        "method": method,
+        "starting_state": "source_sbml",
+        "zero_stress_duration_hours": preparation.horizon_hours,
+        "observables_converged": preparation.converged,
+        "criterion": preparation.criterion,
+        "max_relative_drift": preparation.max_relative_drift,
+        "observables_checked": list(preparation.observables_checked),
+        "experimental_initial_state_validated": False,
+    }
