@@ -134,8 +134,14 @@ assumed first-order decay. No experimentally calibrated default is provided.
 Each run creates a new output directory containing:
 
 - `results.csv`: model outputs and `time_hours`.
+- `fluorescence.csv`: `time_hours`, `green` (`Observed_Green`), `red`
+  (`Reporter_red`, mature mCherry) and `ratio_red_green`
+  (`Measured_Ratio_RG`). The channels are model concentrations in nM,
+  not camera intensity units. `Total_red_pool` includes immature forms
+  and is not the red fluorescence signal.
 - `metadata.json`: parameter profile and provenance, exposure,
-  initialization, solver settings, runtime versions and hashes.
+  initialization, solver settings, runtime versions and hashes, plus
+  the fluorescence mapping and the model's `f` and `eps` values.
 - `model.sbml`: the loaded model before preparation and dose application.
 
 The recorded profile includes its original parameter values; the exposure
@@ -146,6 +152,10 @@ transaction; a failed write can leave a partial output directory.
 
 These exports contain model observables, not experimentally calibrated
 fluorescence or decoder estimates.
+
+The ratio direction is red/green (mCherry/GFP). The exported model ratio
+is `f * Reporter_red / (Observed_Green + eps)`; FRET and `f` are already
+included and are not applied again. Session calibration is not yet applied.
 
 ## Next implementation steps
 

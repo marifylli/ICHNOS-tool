@@ -28,6 +28,27 @@ def _command(variant, out_dir):
     ]
 
 
+def _assert_fluorescence_export(out_dir, metadata, results):
+    mapping = metadata["fluorescence"]
+    assert mapping["ratio_direction"] == "red/green"
+    assert mapping["session_calibration_applied"] is False
+    assert mapping["fret_already_applied"] is True
+    with (out_dir / mapping["file"]).open(encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        assert reader.fieldnames == mapping["csv_columns"]
+        rows = list(reader)
+    assert len(rows) == len(results)
+    for mapped, original in zip(rows, results):
+        assert float(mapped["time_hours"]) == float(original["time_hours"])
+        for channel, observable in mapping["mapping"].items():
+            assert float(mapped[channel]) == float(original[observable])
+        expected = (
+            mapping["f"] * float(mapped["red"])
+            / (float(mapped["green"]) + mapping["eps"])
+        )
+        assert float(mapped["ratio_red_green"]) == pytest.approx(expected)
+
+
 @pytest.mark.parametrize("variant", ["ox", "er"])
 def test_cli_exports_results_and_assumptions(tmp_path, variant):
     out_dir = tmp_path / variant
@@ -78,6 +99,7 @@ def test_cli_exports_results_and_assumptions(tmp_path, variant):
         rtol=1e-6,
     )
     assert "Observed_Green" in rows[0]
+    _assert_fluorescence_export(out_dir, metadata, rows)
 
 
 def test_cli_rejects_existing_output_directory(tmp_path):
@@ -148,6 +170,7 @@ def test_cli_equilibrium_with_constant_stress(tmp_path, variant):
         [float(row[f"S_{variant}"]) for row in rows],
         75.0,
     )
+    _assert_fluorescence_export(out_dir, metadata, rows)
 
 
 @pytest.mark.parametrize(

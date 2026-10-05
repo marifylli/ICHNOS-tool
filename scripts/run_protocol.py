@@ -14,6 +14,7 @@ from pathlib import Path
 import libsbml
 
 from ichnos import build, naming, params, protocol, simulate
+from ichnos.fluorescence import RATIO_DIRECTION, model_fluorescence
 
 
 def _package_version(name):
@@ -155,6 +156,9 @@ def run(args):
             require_equilibrium=True,
         )
 
+    fluorescence = model_fluorescence(result)
+    fluorescence_columns = ["time_hours", *fluorescence]
+
     metadata = {
         "schema_version": 1,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -166,6 +170,22 @@ def run(args):
         "solver_used": asdict(result.solver),
         "integrator": runner.getIntegrator().getName(),
         "csv_columns": ["time_hours", *result.columns],
+        "fluorescence": {
+            "file": "fluorescence.csv",
+            "csv_columns": fluorescence_columns,
+            "ratio_direction": RATIO_DIRECTION,
+            "mapping": {
+                "green": "Observed_Green",
+                "red": "Reporter_red",
+                "ratio_red_green": "Measured_Ratio_RG",
+            },
+            "channel_units": "model concentration in nM, not camera intensity",
+            "ratio_formula": "f * Reporter_red / (Observed_Green + eps)",
+            "f": float(runner[naming.resolve_id(loaded_model, "f", kinds=("parameter",))]),
+            "eps": float(runner[naming.resolve_id(loaded_model, "eps", kinds=("parameter",))]),
+            "fret_already_applied": True,
+            "session_calibration_applied": False,
+        },
         "model_sbml_sha256": _sha256(prepared_sbml),
         "runner_script_sha256": hashlib.sha256(
             Path(__file__).read_bytes()
@@ -220,6 +240,17 @@ def run(args):
         writer.writerow(["time_hours", *result.columns])
         for time, values in zip(result.time, result.values):
             writer.writerow([float(time), *map(float, values)])
+
+    with (args.out_dir / "fluorescence.csv").open(
+        "x", encoding="utf-8", newline=""
+    ) as handle:
+        writer = csv.writer(handle)
+        writer.writerow(fluorescence_columns)
+        for index, time in enumerate(result.time):
+            writer.writerow([
+                float(time),
+                *(float(values[index]) for values in fluorescence.values()),
+            ])
 
     with (args.out_dir / "metadata.json").open(
         "x", encoding="utf-8", newline=""

@@ -7,9 +7,36 @@ import pytest
 import numpy as np
 
 from ichnos import build, naming, protocol as proto, simulate as sim
+from ichnos.fluorescence import model_fluorescence
 
 
 VARIANTS = ("ox", "er")
+
+
+@pytest.mark.parametrize("variant", VARIANTS)
+def test_protocol_fluorescence_preserves_fret_and_nonunit_scale(variant):
+    sbml = build.build_variant_sbml_string(variant, save_sbml=False)
+    document = libsbml.readSBMLFromString(sbml)
+    model = document.getModel()
+    model.getParameter(naming.resolve_id(model, "f", kinds=("parameter",))).setValue(2.0)
+    model.getParameter(naming.resolve_id(model, "eps", kinds=("parameter",))).setValue(0.01)
+    stress_protocol = proto.StressProtocol(variant=variant, dose=75)
+    runner, loaded_model = proto.load_protocol_model(
+        libsbml.writeSBMLToString(document), stress_protocol
+    )
+    result, _ = proto.run_protocol_after_preincubation(
+        runner, stress_protocol, preincubation_hours=2,
+        times_hours=[0, 0.5, 1],
+        id_to_name=naming.id_to_name_map(loaded_model),
+    )
+    signals = model_fluorescence(result)
+    np.testing.assert_array_equal(signals["red"], result["Reporter_red"])
+    assert np.all(signals["red"] < result["Total_red_pool"])
+    assert np.all(signals["green"] < result["Reporter_green"])
+    np.testing.assert_allclose(
+        signals["ratio_red_green"],
+        2.0 * signals["red"] / (signals["green"] + 0.01),
+    )
 
 
 def _loaded(variant):
