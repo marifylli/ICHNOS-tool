@@ -15,6 +15,8 @@ def main():
     parser.add_argument("--condition-id")
     parser.add_argument("--time-field", choices=TIME_FIELDS, required=True)
     parser.add_argument("--ratio-tolerance", type=float, required=True)
+    parser.add_argument("--mode", choices=["discrete", "continuous"], default="discrete")
+    parser.add_argument("--interpolation-validation", type=Path)
     args = parser.parse_args()
     try:
         if args.out.exists():

@@ -225,3 +225,27 @@ def test_sample_decoder_cli_and_overwrite_guard(dataset):
     completed = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
     assert completed.returncode != 0
     assert output.read_bytes() == previous
+
+
+def test_continuous_mode_uses_the_same_checked_sample_linkage(dataset):
+    from ichnos.decoder import load_dose_table
+    from ichnos.continuous_decoder import validate_interpolation, save_interpolation_validation
+    model = load_dose_table(dataset / "table.json")
+    validation = validate_interpolation(model, allowed_error=.1)
+    assert validation["passed"]
+    path = dataset / "validation.json"
+    save_interpolation_validation(validation, path)
+    result = decode_sample(**options(dataset), mode="continuous", interpolation_validation=path)
+    assert result["status"] == "single_compatible_region"
+    assert result["dose_estimate_uM"] == pytest.approx(75)
+    assert result["sample_linkage"]["decoder_mode"] == "continuous"
+    assert result["sample_linkage"]["calibration_applied_again"] is False
+
+
+@pytest.mark.parametrize("change", [
+    {"mode": "continuous"}, {"mode": "unknown"},
+    {"mode": "discrete", "interpolation_validation": "unused.json"},
+])
+def test_invalid_continuous_mode_contract_is_rejected(dataset, change):
+    with pytest.raises(ValueError):
+        decode_sample(**options(dataset), **change)

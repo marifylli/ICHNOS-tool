@@ -1,8 +1,8 @@
 # Population summaries to dose decoder
 
 Implemented on 2026-10-06. This connects one calibrated sample trajectory
-to the existing discrete dose decoder. It does not change the decoder into
-a continuous dose or joint dose/time estimator.
+to the dose decoder. Discrete mode is the default; checked continuous mode
+is described in `continuous_dose_decoder.md`. Neither estimates onset time.
 
 ## What was implemented, how and why
 

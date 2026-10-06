@@ -159,6 +159,12 @@ included and are not applied again. Session calibration is not yet applied.
 
 ## Next implementation steps
 
+Checked continuous dose interpolation at known times is documented in
+[docs/continuous_dose_decoder.md](docs/continuous_dose_decoder.md). It retains
+all compatible dose regions, checks intermediate simulations and supports
+the existing sample-summary adapter. These are compatibility regions,
+not experimentally validated confidence intervals.
+
 The checked adapter from population summaries to the discrete dose decoder
 is documented in [docs/sample_decoder_linkage.md](docs/sample_decoder_linkage.md).
 It selects one sample, requires an explicit elapsed-time field and checks
@@ -180,7 +186,8 @@ documented in [docs/population_summary.md](docs/population_summary.md).
    actual elapsed times, exposure history and initial model state.
 2. Evaluate the exposure assumption and constrain clearance rates using
    experimental data; no experimentally calibrated clearance default exists.
-3. Evaluate grid refinement and continuous dose recovery between grid points.
+3. Extend interpolation verification and grid refinement to the intended
+   operating domain and sharp-response regions.
 4. Evaluate joint dose/time ambiguity and estimator uncertainty using an
    appropriate measurement-noise model.
 5. Validate the workflow against experimental references for each variant.
