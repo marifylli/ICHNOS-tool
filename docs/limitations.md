@@ -7,11 +7,14 @@ Things this repository does **not** do, and claims it must not make.
 - Ratio-only dose decoders and a discrete joint dose/time decoder exist.
   A single snapshot is accepted, but its ratio alone generally does not identify
   dose and time. Multiple observations require known relative spacing.
-- The planned two-observable snapshot decoder (ratio plus calibrated green)
-  is not implemented. Green is used for QC/detection filtering, not inference.
+- A separate two-observable snapshot decoder now uses ratio and two-reference
+  normalized green for grid compatibility. It requires explicit observation
+  and reference artifacts; the older sample adapter remains ratio-only.
+  Independent experimental calibration and probabilistic uncertainty are open.
 - Relative ratio calibration assumes a zero-intercept multiplicative mapping
   to model reference values. This is model-conditioned normalization, not
-  independent validation of the model or camera. Green calibration remains open.
+  independent validation of the model or camera. Two-reference green
+  normalization is implemented separately; its experimental validation remains open.
 - The noise-free synthetic end-to-end workflow and visual reports exist; they
   test a limited oxidative scenario and do not establish experimental accuracy.
 - Background subtraction is called by the image pipeline, but this does not

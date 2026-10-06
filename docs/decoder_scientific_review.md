@@ -1,5 +1,11 @@
 # Decoder scientific review — 2026-10-06
 
+This records the pre-repair scientific assessment. The subsequent
+[two-observable snapshot implementation](two_observable_decoder.md) adds
+ratio + normalized-green grid compatibility; posterior/experimental validation
+remain outstanding. Statements below about the missing snapshot decoder
+describe the reviewed baseline.
+
 ## Finding and scope correction
 
 The implemented decoders use `Measured_Ratio_RG` alone. Green enters image QC

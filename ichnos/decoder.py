@@ -94,6 +94,17 @@ def build_dose_table(
     equilibration_tolerance=1e-6,
 ) -> DoseTable:
     """Generate each grid dose with a fresh runner and the shared protocol."""
+    table, _ = _build_response_table(**locals())
+    return table
+
+
+def _build_response_table(
+    *, variant: str, doses_uM, times_hours, initialization: str,
+    profile_name: str = "default", preincubation_hours=None,
+    clearance_rate_per_hour=None, equilibration_horizon_hours=50.,
+    equilibration_tolerance=1e-6,
+):
+    """Shared forward simulation; return ratio table and Observed_Green."""
     import libsbml
     from . import build, naming, params, protocol
     from .fluorescence import model_fluorescence
@@ -117,6 +128,7 @@ def build_dose_table(
     params.apply_profile(model, profile)
     baseline = libsbml.writeSBMLToString(document)
     ratios = []
+    greens = []
     records = []
     for dose in doses:
         exposure = protocol.StressProtocol(
@@ -140,7 +152,9 @@ def build_dose_table(
                 runner, exposure, times_hours=times, id_to_name=names,
                 preincubation_hours=float(duration),
             )
-        ratios.append(model_fluorescence(result)["ratio_red_green"])
+        fluorescence = model_fluorescence(result)
+        ratios.append(fluorescence["ratio_red_green"])
+        greens.append(fluorescence["green"])
         records.append({
             "dose_uM": float(dose), "exposure": result.exposure,
             "initialization": result.initialization,
@@ -169,7 +183,7 @@ def build_dose_table(
         },
         "scope": "discrete dose grid at known observation times; no fitted experimental response",
     }
-    return DoseTable(doses, times, np.asarray(ratios), provenance)
+    return DoseTable(doses, times, np.asarray(ratios), provenance), np.asarray(greens)
 
 
 def decode_dose(

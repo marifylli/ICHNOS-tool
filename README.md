@@ -1,13 +1,14 @@
 # ICHNOS tool
 
 Research software for fluorescence image processing, ox/er model simulation
-and conditional decoding of calibrated mCherry/GFP ratios.
+and conditional decoding of ratio and green fluorescence observations.
 
-Implemented decoders use the ratio only: discrete/checked continuous dose
-at known times, and a discrete dose–elapsed-time search from one or more
-observations with known relative spacing. They retain compatible alternatives.
-They do not implement the original two-observable snapshot inversion or
-estimator uncertainty. A unique grid match is not proof of identifiability.
+Ratio-only decoders support discrete/checked continuous dose at known times
+and discrete dose–elapsed-time compatibility. A separate two-observable
+snapshot decoder now uses ratio plus reference-normalized green to retain
+compatible dose/time grid pairs. It requires explicit reference calibration
+and observation metadata. Estimator uncertainty/posteriors remain unimplemented.
+A unique grid match is not proof of identifiability.
 Synthetic verification checks software behavior under stated assumptions;
 experimental recovery accuracy has not been established.
 
@@ -28,9 +29,10 @@ Migrated code and model sources are recorded in
 | Shared simulator (`ichnos.simulate`) | Implemented with solver settings and observable selections |
 | Parameter profiles (`ichnos.params`) | Packaged; value, unit and provenance checks implemented |
 | Model exports (`ichnos.io`) | Unique archives with manifests and overwrite protection |
-| Experimental exposure protocol | Constant-stress baseline and optional first-order clearance with an explicit rate in h^-1; observation times supplied in hours; computational equilibration or explicit finite preincubation with initialization assumptions recorded | |
-| Measurement mapping and session calibration | Model fluorescence exports and relative ratio scaling implemented; independent instrument calibration and green mapping incomplete |
-| Ratio-only decoders | Discrete dose/time and checked continuous dose implemented; original ratio + green snapshot decoder pending |
+| Experimental exposure protocol | Constant-stress baseline and optional first-order clearance with an explicit rate in h^-1; observation times supplied in hours; computational equilibration or explicit finite preincubation with initialization assumptions recorded |
+| Measurement mapping and session calibration | Model fluorescence exports, relative ratio scaling and two-reference green normalization implemented; independent experimental calibration remains open |
+| Ratio-only decoders | Discrete dose/time and checked continuous dose implemented |
+| Two-observable snapshot decoder | Ratio + reference-normalized green compatibility on a discrete grid; explicit calibration/observation artifacts, no posterior |
 | End-to-end and visual reports | Implemented for a fixed noise-free synthetic oxidative scenario |
 | Estimator uncertainty | Not implemented |
 
@@ -197,8 +199,8 @@ documented in [docs/population_summary.md](docs/population_summary.md).
    experimental data; no experimentally calibrated clearance default exists.
 3. Extend interpolation verification and grid refinement to the intended
    operating domain and sharp-response regions.
-4. Implement independently calibrated green alongside the ratio, and test
-   snapshot dose/time identifiability before adding replicate-based likelihoods.
+4. Validate two-reference green calibration independently, test snapshot
+   identifiability across the intended domain and add replicate-based likelihoods.
 5. Validate the workflow against experimental references for each variant.
 
 Copper/CuSO4 modelling is outside the current implementation scope.
@@ -236,3 +238,10 @@ and open `outputs/e2e-visual/index.html` in a browser. The report uses fixed
 channel display scales and explicitly identifies the images as synthetic.
 The visual report includes reference model time courses and dose–response grid
 plots, with calibrated synthetic image ratios overlaid for comparison.
+
+### Ratio and green snapshot decoding
+
+Run `python scripts/verify_snapshot_decoder.py --out-dir outputs/two-observable-verification`
+to verify a late oxidative snapshot with model-dependent synthetic green.
+See [the two-observable decoder](docs/two_observable_decoder.md) for reference
+contracts, CLI usage and the remaining uncertainty/experimental validation work.
