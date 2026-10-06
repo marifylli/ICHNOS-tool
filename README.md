@@ -159,6 +159,11 @@ included and are not applied again. Session calibration is not yet applied.
 
 ## Next implementation steps
 
+The first model-generated discrete dose decoder at known observation times
+is documented in [docs/dose_decoder.md](docs/dose_decoder.md). It reports
+all compatible grid doses and abstains on ambiguity or incompatibility.
+This is computational verification, not experimental dose validation.
+
 Relative session calibration and its synthetic verification procedure are
 documented in [docs/session_calibration.md](docs/session_calibration.md).
 The synthetic artifacts verify software scale recovery; they are not an
@@ -170,12 +175,12 @@ documented in [docs/population_summary.md](docs/population_summary.md).
    actual elapsed times, exposure history and initial model state.
 2. Evaluate the exposure assumption and constrain clearance rates using
    experimental data; no experimentally calibrated clearance default exists.
-3. Implement the mapping from model observables to measured fluorescence,
-   session calibration and population grouping.
-4. Build a calibration artifact and decoder for one known variant.
-5. Evaluate dose/time ambiguity and estimator uncertainty using an
+3. Add a sample-summary adapter that verifies the matching protocol,
+   session calibration and choice of elapsed-time field before decoding.
+4. Evaluate grid refinement and continuous dose recovery between grid points.
+5. Evaluate joint dose/time ambiguity and estimator uncertainty using an
    appropriate measurement-noise model.
-6. Extend the validated workflow to the second variant.
+6. Validate the workflow against experimental references for each variant.
 
 Copper/CuSO4 modelling is outside the current implementation scope.
 Its images can be processed without a copper-specific model or decoder.
