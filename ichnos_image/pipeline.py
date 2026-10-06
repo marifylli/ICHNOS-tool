@@ -17,7 +17,7 @@ import numpy as np
 from . import correct, export, extract, segment
 from .schema import CellRecord
 
-from ichnos.schema import validate_elapsed_hours
+from ichnos.schema import validate_elapsed_hours, validate_optional_identifier
 
 
 class CrosstalkCalibrationWarning(UserWarning):
@@ -52,8 +52,12 @@ class ImageSet:
 
     sampling_time_hours: float | None = None
     measurement_time_hours: float | None = None
+    sample_id: str | None = None
+    condition_id: str | None = None
 
     def __post_init__(self):
+        for name in ("sample_id", "condition_id"):
+            validate_optional_identifier(getattr(self, name), field_name=name)
         for name in ("sampling_time_hours", "measurement_time_hours"):
             setattr(
                 self,
@@ -152,6 +156,8 @@ def process_image_set(
         acquisition_order=image_set.acquisition_order,
         sampling_time_hours=image_set.sampling_time_hours,
         measurement_time_hours=image_set.measurement_time_hours,
+        sample_id=image_set.sample_id,
+        condition_id=image_set.condition_id,
     )
 
 

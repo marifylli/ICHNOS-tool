@@ -103,7 +103,9 @@ API as a software guard, not as evidence that three measurements establish
 experimental calibration. For real data, references must match biological
 condition and time, pass QC and use acquisition settings represented by the
 calibration. Cells must not be treated as independent biological replicates.
-Population aggregation and image-pipeline integration are subsequent work.
+Population aggregation and image-pipeline integration are implemented as a
+separate summary step; see `population_summary.md`. Real acquisition
+settings and calibration references still require experimental verification.
 
 The method assumes a constant multiplicative scale and zero intercept.
 It does not establish detector linearity, detection limits, model validity,

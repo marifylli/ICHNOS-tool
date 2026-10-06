@@ -15,6 +15,8 @@ Bio-Formats via python-bioformats, not included here).
     lamp_warmup_minutes
 Optional timing columns:
 sampling_time_hours, measurement_time_hours
+Optional sample identity columns:
+sample_id, condition_id (sample_id is required by the separate summary CLI)
 
 Both are actual elapsed hours from stress onset. Missing values remain
 unknown. timepoint is a point identifier, not an elapsed time in hours.
@@ -34,7 +36,7 @@ from skimage.color import rgb2gray
 
 import pandas as pd
 from ichnos_image.instrument import SATURATION_VALUE
-from ichnos.schema import validate_elapsed_hours
+from ichnos.schema import validate_elapsed_hours, validate_optional_identifier
 
 from ichnos_image import ImageSet, process_experiment
 from ichnos_image.correct import calibrate_crosstalk_from_control
@@ -64,6 +66,13 @@ def _optional_elapsed_hours(row, name):
 
     return validate_elapsed_hours(value, field_name=name)
 
+
+def _optional_identifier(row, name):
+    value = getattr(row, name, None)
+    if value is None or pd.isna(value):
+        return None
+    return validate_optional_identifier(str(value), field_name=name)
+
 def _build_image_sets(
     manifest_path: Path,
     *,
@@ -71,10 +80,15 @@ def _build_image_sets(
     red_extraction: str | None = None,
     saturation_value: float = SATURATION_VALUE,
 ) -> list[ImageSet]:
-    manifest = pd.read_csv(manifest_path)
+    manifest = pd.read_csv(
+        manifest_path,
+        dtype={"session_id": str, "sample_id": str, "condition_id": str},
+    )
     image_sets = []
 
     for row in manifest.itertuples():
+        sample_id = _optional_identifier(row, "sample_id")
+        condition_id = _optional_identifier(row, "condition_id")
         sampling_time_hours = _optional_elapsed_hours(
         row, "sampling_time_hours"
         )
@@ -130,6 +144,8 @@ def _build_image_sets(
                 lamp_warmup_minutes=float(row.lamp_warmup_minutes),
                 sampling_time_hours=sampling_time_hours,
                 measurement_time_hours=measurement_time_hours,
+                sample_id=sample_id,
+                condition_id=condition_id,
             )
         )
 

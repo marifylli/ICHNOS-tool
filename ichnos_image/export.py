@@ -37,6 +37,8 @@ def build_records(
     lamp_warmup_threshold_minutes: float = LAMP_WARMUP_THRESHOLD_MINUTES,
     sampling_time_hours: float | None = None,
     measurement_time_hours: float | None = None,
+    sample_id: str | None = None,
+    condition_id: str | None = None,
 ) -> list[CellRecord]:
     """Turn per-cell features + per-image acquisition/QC metadata into schema
     rows. QC flags here are image-level (focus_score, registration_shift_px)
@@ -87,6 +89,8 @@ def build_records(
             acquisition_order=acquisition_order,
             sampling_time_hours=sampling_time_hours,
             measurement_time_hours=measurement_time_hours,
+            sample_id=sample_id,
+            condition_id=condition_id,
         )
         validate(record)
         records.append(record)

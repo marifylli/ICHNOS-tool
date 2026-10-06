@@ -38,6 +38,14 @@ def validate_elapsed_hours(value, *, field_name: str) -> float | None:
 
     return value
 
+
+def validate_optional_identifier(value, *, field_name: str) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} must be a non-empty string or None")
+    return value
+
 # gia pragmatikous xronous peiramatos
 
 @dataclass
@@ -83,6 +91,8 @@ class CellRecord:
 
     sampling_time_hours: float | None = None
     measurement_time_hours: float | None = None
+    sample_id: str | None = None
+    condition_id: str | None = None
 
 
 CSV_COLUMNS = [f.name for f in fields(CellRecord)]
@@ -94,6 +104,9 @@ def validate(record: CellRecord) -> None:
         raise ValueError(f"cell {record.cell_id}: non-positive area_px")
     if record.raw_mean_green < 0 or record.raw_mean_red < 0:
         raise ValueError(f"cell {record.cell_id}: negative raw intensity")
+
+    for name in ("sample_id", "condition_id"):
+        validate_optional_identifier(getattr(record, name), field_name=name)
 
     for name in ("sampling_time_hours", "measurement_time_hours"):
         validate_elapsed_hours(

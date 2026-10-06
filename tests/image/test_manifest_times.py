@@ -66,6 +66,19 @@ def test_manifest_preserves_fractional_times(
     assert image_sets[0].measurement_time_hours == 0.75
 
 
+def test_manifest_preserves_sample_identifiers_and_leading_zeros(
+    tmp_path, image_paths, build_image_sets
+):
+    row = _manifest_row(*image_paths)
+    row.update(session_id="001", sample_id="002", condition_id="003")
+    manifest = tmp_path / "manifest.csv"
+    pd.DataFrame([row]).to_csv(manifest, index=False)
+    image_set = build_image_sets(manifest)[0]
+    assert image_set.session_id == "001"
+    assert image_set.sample_id == "002"
+    assert image_set.condition_id == "003"
+
+
 @pytest.mark.parametrize("include_empty_columns", [False, True])
 def test_manifest_missing_times_remain_unknown(
     tmp_path, image_paths, build_image_sets, include_empty_columns

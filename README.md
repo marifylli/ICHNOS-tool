@@ -162,8 +162,9 @@ included and are not applied again. Session calibration is not yet applied.
 Relative session calibration and its synthetic verification procedure are
 documented in [docs/session_calibration.md](docs/session_calibration.md).
 The synthetic artifacts verify software scale recovery; they are not an
-experimental microscope calibration. Image-pipeline integration and
-population aggregation remain to be implemented.
+experimental microscope calibration. Image-pipeline sample identifiers,
+QC-filtered population summaries and optional session calibration are
+documented in [docs/population_summary.md](docs/population_summary.md).
 
 1. Align experimental metadata with the simulator: variant, initial dose,
    actual elapsed times, exposure history and initial model state.
