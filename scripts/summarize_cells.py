@@ -67,6 +67,10 @@ def run(args):
     encoded = json.dumps(metadata, indent=2, allow_nan=False) + "\n"
     args.out_dir.mkdir(parents=True)
     summaries.to_csv(args.out_dir / "samples.csv", index=False)
+    metadata["samples_csv_sha256"] = hashlib.sha256(
+        (args.out_dir / "samples.csv").read_bytes()
+    ).hexdigest()
+    encoded = json.dumps(metadata, indent=2, allow_nan=False) + "\n"
     (args.out_dir / "metadata.json").write_text(encoded, encoding="utf-8")
     print(f"{len(cells)} cell rows -> {len(summaries)} sample summaries -> {args.out_dir}")
 

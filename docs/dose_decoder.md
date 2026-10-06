@@ -44,9 +44,9 @@ The placeholders are not numeric data. Keep samples and sessions separate.
 Select the actual elapsed times appropriate to the biological readout;
 sampling and acquisition time are not automatically interchangeable.
 The decoder requires exact agreement with the table's recorded time grid.
-No automatic adapter from `samples.csv` is implemented in this step.
-The caller must select one sample, the correct time field and the matching
-variant, profile, protocol and session-calibration reference.
+The checked adapter from `samples.csv` is documented in
+`sample_decoder_linkage.md`. It requires explicit sample/time selection and
+checks the matching model, protocol and session-calibration reference.
 
 The caller must specify a positive absolute ratio tolerance, either one
 scalar for all times or one value per time via the Python API. No tolerance

@@ -169,6 +169,11 @@ def save_session_calibration(calibration: SessionCalibration, path) -> Path:
 
 def load_session_calibration(path) -> SessionCalibration:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return session_calibration_from_dict(data)
+
+
+def session_calibration_from_dict(data: dict) -> SessionCalibration:
+    """Validate an embedded artifact using the same checks as file loading."""
     if data.get("schema_version") != 1 or data.get("ratio_direction") != RATIO_DIRECTION:
         raise ValueError("unsupported calibration schema or ratio direction")
     calibration = SessionCalibration(**{

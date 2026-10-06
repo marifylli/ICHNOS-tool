@@ -159,6 +159,11 @@ included and are not applied again. Session calibration is not yet applied.
 
 ## Next implementation steps
 
+The checked adapter from population summaries to the discrete dose decoder
+is documented in [docs/sample_decoder_linkage.md](docs/sample_decoder_linkage.md).
+It selects one sample, requires an explicit elapsed-time field and checks
+session-calibration and model/protocol provenance before decoding.
+
 The first model-generated discrete dose decoder at known observation times
 is documented in [docs/dose_decoder.md](docs/dose_decoder.md). It reports
 all compatible grid doses and abstains on ambiguity or incompatibility.
@@ -175,12 +180,10 @@ documented in [docs/population_summary.md](docs/population_summary.md).
    actual elapsed times, exposure history and initial model state.
 2. Evaluate the exposure assumption and constrain clearance rates using
    experimental data; no experimentally calibrated clearance default exists.
-3. Add a sample-summary adapter that verifies the matching protocol,
-   session calibration and choice of elapsed-time field before decoding.
-4. Evaluate grid refinement and continuous dose recovery between grid points.
-5. Evaluate joint dose/time ambiguity and estimator uncertainty using an
+3. Evaluate grid refinement and continuous dose recovery between grid points.
+4. Evaluate joint dose/time ambiguity and estimator uncertainty using an
    appropriate measurement-noise model.
-6. Validate the workflow against experimental references for each variant.
+5. Validate the workflow against experimental references for each variant.
 
 Copper/CuSO4 modelling is outside the current implementation scope.
 Its images can be processed without a copper-specific model or decoder.

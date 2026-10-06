@@ -127,6 +127,9 @@ def build_dose_table(
             equilibration_tolerance=equilibration_tolerance,
         )
         runner, loaded_model = protocol.load_protocol_model(baseline, exposure)
+        prepared_model_sha256 = hashlib.sha256(
+            runner.getCurrentSBML().encode()
+        ).hexdigest()
         names = naming.id_to_name_map(loaded_model)
         if initialization == "equilibrium":
             result, _ = protocol.run_protocol_at_times(
@@ -142,6 +145,7 @@ def build_dose_table(
             "dose_uM": float(dose), "exposure": result.exposure,
             "initialization": result.initialization,
             "solver_used": asdict(result.solver),
+            "prepared_model_sbml_sha256": prepared_model_sha256,
         })
     provenance = {
         "source_kind": "model_generated", "experimentally_validated": False,
