@@ -249,3 +249,5 @@ contracts, CLI usage and the remaining uncertainty/experimental validation work.
 ### Conditional snapshot posterior
 
 See [snapshot posterior](docs/snapshot_posterior.md) for correlated replicate-noise fitting, explicit priors, discrete credible sets and a synthetic held-out check. This is conditional inference under a fixed model and calibration, not experimental validation.
+
+See [dense posterior verification](docs/dense_posterior_verification.md) for per-node errors, credible-set sizes, clearance misspecification and a ratio-only versus two-observable figure.
