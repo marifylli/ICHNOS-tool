@@ -197,3 +197,12 @@ Its images can be processed without a copper-specific model or decoder.
 
 See [docs/limitations.md](docs/limitations.md) for limitations and
 unresolved measurement decisions.
+
+### Joint discrete dose and elapsed time
+
+`python scripts/run_joint_decoder.py` checks every dose/elapsed-time pair in a
+model-generated grid using already calibrated red/green ratios and known spacing
+between measurements. Elapsed time is measured from exposure onset to the first
+measurement. It retains ambiguous pairs and does not interpolate or claim
+statistical confidence intervals or experimental validation. See
+[the procedure and synthetic verification](docs/joint_dose_time_decoder.md).
