@@ -159,6 +159,12 @@ included and are not applied again. Session calibration is not yet applied.
 
 ## Next implementation steps
 
+Relative session calibration and its synthetic verification procedure are
+documented in [docs/session_calibration.md](docs/session_calibration.md).
+The synthetic artifacts verify software scale recovery; they are not an
+experimental microscope calibration. Image-pipeline integration and
+population aggregation remain to be implemented.
+
 1. Align experimental metadata with the simulator: variant, initial dose,
    actual elapsed times, exposure history and initial model state.
 2. Evaluate the exposure assumption and constrain clearance rates using
