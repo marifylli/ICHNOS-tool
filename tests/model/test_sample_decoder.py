@@ -249,3 +249,45 @@ def test_continuous_mode_uses_the_same_checked_sample_linkage(dataset):
 def test_invalid_continuous_mode_contract_is_rejected(dataset, change):
     with pytest.raises(ValueError):
         decode_sample(**options(dataset), **change)
+
+
+def test_joint_sample_recovers_dose_and_time_from_image_summary(dataset):
+    result = decode_sample(**options(dataset), mode="joint", elapsed_time_grid_hours=[.5])
+    assert result["status"] == "unique_grid_pair"
+    assert result["dose_estimate_uM"] == 75
+    assert result["elapsed_time_estimate_hours"] == .5
+    assert result["sample_linkage"]["calibration_applied_again"] is False
+    assert result["sample_linkage"]["recorded_times_used_as_spacing_only"] is True
+
+
+def test_joint_uses_spacing_not_recorded_absolute_times(dataset):
+    args = options(dataset)
+    args["time_field"] = "measurement_time_hours"
+    result = decode_sample(**args, mode="joint", elapsed_time_grid_hours=[.5])
+    assert result["elapsed_time_estimate_hours"] == .5
+    assert result["sample_linkage"]["recorded_times_hours"] == [.75, 1.25]
+
+
+@pytest.mark.parametrize("extra", [
+    dict(mode="joint"), dict(mode="discrete", elapsed_time_grid_hours=[.5]),
+    dict(mode="joint", elapsed_time_grid_hours=[.5], interpolation_validation="unused"),
+    dict(mode="joint", elapsed_time_grid_hours=[.75]),
+])
+def test_joint_sample_invalid_contract(dataset, extra):
+    with pytest.raises(ValueError):
+        decode_sample(**options(dataset), **extra)
+
+
+def test_joint_sample_cli(dataset):
+    out = dataset / "joint.json"
+    args = options(dataset)
+    command = [sys.executable, str(ROOT / "scripts/decode_sample.py")]
+    for key, value in args.items():
+        command.extend(["--" + key.replace("_", "-"), str(value)])
+    command.extend(["--mode", "joint", "--elapsed-time-grid-hours", ".5", "--out", str(out)])
+    completed = subprocess.run(command, capture_output=True, text=True)
+    assert completed.returncode == 0, completed.stderr
+    assert json.loads(out.read_text())["status"] == "unique_grid_pair"
+    before = out.read_bytes()
+    assert subprocess.run(command, capture_output=True).returncode != 0
+    assert out.read_bytes() == before

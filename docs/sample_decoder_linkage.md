@@ -126,3 +126,11 @@ missing summaries, inadequate counts, changed CSVs, inconsistent coefficient
 or calibration identity, mismatched forward models/profiles/solvers/exposure/
 initialization, and output overwrite. Documentation of synthetic calibration
 and its motivation remains in `session_calibration.md`.
+
+## Unknown exposure onset
+
+Use `--mode joint --elapsed-time-grid-hours ...` for a discrete dose/time search.
+In this mode the selected time field supplies measurement spacing only; candidate
+elapsed times define exposure onset relative to the first selected measurement.
+See [sample joint decoding](sample_joint_decoder_linkage.md) for the procedure,
+required table coverage and synthetic verification.

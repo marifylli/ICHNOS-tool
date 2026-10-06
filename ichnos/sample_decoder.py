@@ -49,17 +49,19 @@ def decode_sample(
     *, samples_csv, summary_metadata, dose_table, calibration_reference,
     session_id: str, sample_id: str, time_field: str, ratio_tolerance,
     condition_id: str | None = None,
-    mode: str = "discrete", interpolation_validation=None,
+    mode: str = "discrete", interpolation_validation=None, elapsed_time_grid_hours=None,
 ) -> dict:
     """Decode one explicitly selected trajectory without recalibrating it."""
     if time_field not in TIME_FIELDS:
         raise ValueError(f"time_field must be one of {TIME_FIELDS}")
-    if mode not in {"discrete", "continuous"}:
-        raise ValueError("mode must be discrete or continuous")
+    if mode not in {"discrete", "continuous", "joint"}:
+        raise ValueError("mode must be discrete, continuous or joint")
     if mode == "continuous" and interpolation_validation is None:
         raise ValueError("continuous mode requires interpolation_validation")
-    if mode == "discrete" and interpolation_validation is not None:
+    if mode != "continuous" and interpolation_validation is not None:
         raise ValueError("interpolation_validation requires continuous mode")
+    if (mode == "joint") != (elapsed_time_grid_hours is not None):
+        raise ValueError("elapsed_time_grid_hours is required only for joint mode")
     for name, value in (("session_id", session_id), ("sample_id", sample_id)):
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{name} must be explicit and non-empty")
@@ -121,7 +123,16 @@ def decode_sample(
         raise ValueError("calibrated median differs from original median / c_session")
     arguments = dict(times_hours=selected[time_field].to_numpy(),
                      calibrated_ratios=corrected, ratio_tolerance=ratio_tolerance)
-    if mode == "continuous":
+    if mode == "joint":
+        from .joint_decoder import decode_joint_dose_time
+        from .simulate import validate_observation_times
+        recorded_times = validate_observation_times(arguments.pop("times_hours"))
+        relative_times = recorded_times - recorded_times[0]
+        result = decode_joint_dose_time(
+            table, **arguments, relative_times_hours=relative_times,
+            elapsed_time_grid_hours=elapsed_time_grid_hours,
+        )
+    elif mode == "continuous":
         from .continuous_decoder import decode_continuous_dose, load_interpolation_validation
         result = decode_continuous_dose(
             table, **arguments,
@@ -133,7 +144,9 @@ def decode_sample(
         "session_id": session_id, "sample_id": sample_id,
         "decoder_mode": mode,
         "condition_id": (None if pd.isna(selected.condition_id.iloc[0]) else selected.condition_id.iloc[0]),
-        "time_field": time_field, "timepoints": selected.timepoint.tolist(),
+        "time_field": time_field, "recorded_times_hours": selected[time_field].tolist(),
+        "recorded_times_used_as_spacing_only": mode == "joint",
+        "timepoints": selected.timepoint.tolist(),
         "samples_csv_sha256": digest, "data_kind": data_kind,
         "calibration_reference_id": calibration.reference_id,
         "c_session": calibration.c_session, "calibration_applied_again": False,

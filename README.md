@@ -206,3 +206,8 @@ between measurements. Elapsed time is measured from exposure onset to the first
 measurement. It retains ambiguous pairs and does not interpolate or claim
 statistical confidence intervals or experimental validation. See
 [the procedure and synthetic verification](docs/joint_dose_time_decoder.md).
+
+The sample-summary adapter also supports `--mode joint` with an explicit
+`--elapsed-time-grid-hours` grid. It uses recorded times as measurement spacing
+and retains the calibration/model provenance checks. See
+[sample joint decoder linkage](docs/sample_joint_decoder_linkage.md).
