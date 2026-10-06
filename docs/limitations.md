@@ -2,12 +2,21 @@
 
 Things this repository does **not** do, and claims it must not make.
 
-## Not implemented
+## Implemented scope and unresolved inference
 
-- No decoder exists. Experimental images cannot yet be converted into
-  dose or elapsed-time estimates.
-- Measurement mapping, complete session calibration and a decoder
-  calibration artifact remain unfinished.
+- Ratio-only dose decoders and a discrete joint dose/time decoder exist.
+  A single snapshot is accepted, but its ratio alone generally does not identify
+  dose and time. Multiple observations require known relative spacing.
+- The planned two-observable snapshot decoder (ratio plus calibrated green)
+  is not implemented. Green is used for QC/detection filtering, not inference.
+- Relative ratio calibration assumes a zero-intercept multiplicative mapping
+  to model reference values. This is model-conditioned normalization, not
+  independent validation of the model or camera. Green calibration remains open.
+- The noise-free synthetic end-to-end workflow and visual reports exist; they
+  test a limited oxidative scenario and do not establish experimental accuracy.
+- Background subtraction is called by the image pipeline, but this does not
+  establish subtraction of cellular autofluorescence or validate zero intercept
+  in the ratio calibration. An affine diagnostic is available separately.
 - Optional first-order clearance is implemented, but its rate has not been experimentally calibrated. Constant stress remains an available baseline.
   The current constant-stress baseline is a model assumption, not a
   measurement of the experimental exposure history.
@@ -31,7 +40,7 @@ Things this repository does **not** do, and claims it must not make.
 - Flat fields are supported in the Python API but not exposed through the CLI.
 - `timepoint` is an acquisition index, not elapsed biological time.
 - `integrated_green` is a sum of pixel intensities, not a reporter
-  concentration. The mapping to model observables is unresolved.
+  concentration. Its experimental mapping to model concentration remains unresolved.
 
 ## Exposure model and clearance decision
 

@@ -16,7 +16,7 @@ dependencies = [
 [project.optional-dependencies]
 # Image analysis (ichnos_image). Separate from the base install so that a
 # model/decoder-only user does not pull scikit-image.
-image = ["scikit-image>=0.23", "pillow", "tifffile"]
+image = ["scikit-image>=0.23", "pillow", "tifffile", "matplotlib"]
 # Optional deep-learning segmentation backend.
 cellpose = ["cellpose", "torch"]
 # Model building and simulation. tellurium is kept for now rather than

@@ -1,11 +1,15 @@
 # ICHNOS tool
 
-Software under development for converting fluorescence microscopy images
-of the ICHNOS yeast stress biosensor into estimates of stress dose and
-time since stress onset, with quality-control flags and uncertainty.
+Research software for fluorescence image processing, ox/er model simulation
+and conditional decoding of calibrated mCherry/GFP ratios.
 
-The current implementation processes images and simulates the ox and er
-models. It does not yet estimate dose or time from experimental images.
+Implemented decoders use the ratio only: discrete/checked continuous dose
+at known times, and a discrete dose–elapsed-time search from one or more
+observations with known relative spacing. They retain compatible alternatives.
+They do not implement the original two-observable snapshot inversion or
+estimator uncertainty. A unique grid match is not proof of identifiability.
+Synthetic verification checks software behavior under stated assumptions;
+experimental recovery accuracy has not been established.
 
 The research repositories (`Ichnos_PULSE`, `ICHNOS-ablation`,
 `ichnos-fisher`, `DryLabTool`) retain the supporting studies.
@@ -25,12 +29,17 @@ Migrated code and model sources are recorded in
 | Parameter profiles (`ichnos.params`) | Packaged; value, unit and provenance checks implemented |
 | Model exports (`ichnos.io`) | Unique archives with manifests and overwrite protection |
 | Experimental exposure protocol | Constant-stress baseline and optional first-order clearance with an explicit rate in h^-1; observation times supplied in hours; computational equilibration or explicit finite preincubation with initialization assumptions recorded | |
-| Measurement mapping and session calibration | Not complete |
-| Calibration artifact and decoder | Not implemented |
+| Measurement mapping and session calibration | Model fluorescence exports and relative ratio scaling implemented; independent instrument calibration and green mapping incomplete |
+| Ratio-only decoders | Discrete dose/time and checked continuous dose implemented; original ratio + green snapshot decoder pending |
+| End-to-end and visual reports | Implemented for a fixed noise-free synthetic oxidative scenario |
 | Estimator uncertainty | Not implemented |
 
 Passing tests verify software behaviour under controlled assumptions.
 They do not establish experimental accuracy for dose or time estimation.
+
+
+See [the decoder scientific review](docs/decoder_scientific_review.md) for
+reproduced counterexamples, calibration diagnostics and the required two-observable design.
 
 ## Install
 
@@ -157,7 +166,7 @@ The ratio direction is red/green (mCherry/GFP). The exported model ratio
 is `f * Reporter_red / (Observed_Green + eps)`; FRET and `f` are already
 included and are not applied again. Session calibration is not yet applied.
 
-## Next implementation steps
+## Implemented workflows and remaining scientific work
 
 Checked continuous dose interpolation at known times is documented in
 [docs/continuous_dose_decoder.md](docs/continuous_dose_decoder.md). It retains
@@ -188,8 +197,8 @@ documented in [docs/population_summary.md](docs/population_summary.md).
    experimental data; no experimentally calibrated clearance default exists.
 3. Extend interpolation verification and grid refinement to the intended
    operating domain and sharp-response regions.
-4. Evaluate joint dose/time ambiguity and estimator uncertainty using an
-   appropriate measurement-noise model.
+4. Implement independently calibrated green alongside the ratio, and test
+   snapshot dose/time identifiability before adding replicate-based likelihoods.
 5. Validate the workflow against experimental references for each variant.
 
 Copper/CuSO4 modelling is outside the current implementation scope.
@@ -211,3 +220,19 @@ The sample-summary adapter also supports `--mode joint` with an explicit
 `--elapsed-time-grid-hours` grid. It uses recorded times as measurement spacing
 and retains the calibration/model provenance checks. See
 [sample joint decoder linkage](docs/sample_joint_decoder_linkage.md).
+
+### Complete synthetic verification
+
+Run `python scripts/verify_end_to_end.py --out-dir outputs/e2e-verification`
+with a new output directory to exercise reference calibration, synthetic image
+processing, population summaries, discrete/continuous dose and joint dose/time
+decoding, ambiguity and low-green rejection. Read the generated `report.md` and
+`report.json` for expected/actual checks. See
+[the complete procedure and limitations](docs/end_to_end_verification.md).
+
+To view channel previews, cell outlines and image-linked summaries, run
+`python scripts/render_e2e_report.py --input-dir outputs/e2e-verification --out-dir outputs/e2e-visual`
+and open `outputs/e2e-visual/index.html` in a browser. The report uses fixed
+channel display scales and explicitly identifies the images as synthetic.
+The visual report includes reference model time courses and dose–response grid
+plots, with calibrated synthetic image ratios overlaid for comparison.
