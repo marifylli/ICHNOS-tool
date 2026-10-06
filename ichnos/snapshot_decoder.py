@@ -161,11 +161,9 @@ def validate_snapshot_calibration(table, calibration):
         raise ValueError('calibration differs from table or recorded reference mapping')
 
 
-def decode_snapshot(table, calibration, observation, *, ratio_tolerance, green_tolerance, green_floor):
-    """Decode a single raw ratio/green summary; no target elapsed time is input."""
+def prepare_snapshot(table, calibration, observation, *, green_floor):
+    """Validate identity/units and normalize a single snapshot for inference."""
     validate_snapshot_calibration(table, calibration)
-    ratio_tolerance = _number(ratio_tolerance, 'ratio_tolerance', positive=True)
-    green_tolerance = _number(green_tolerance, 'green_tolerance', positive=True)
     green_floor = _number(green_floor, 'green_floor')
     for name in ('session_id','specimen_id','biological_replicate_id'):
         _nonempty(observation.get(name), name)
@@ -197,7 +195,7 @@ def decode_snapshot(table, calibration, observation, *, ratio_tolerance, green_t
         calibration_artifact_id=calibration['artifact_id'],
         observation=json.loads(json.dumps(observation,allow_nan=False)),
         ratio_red_green=ratio, green_norm=green, green_norm_outside_reference_interval=bool(green<0 or green>1),
-        green_was_clipped=False, ratio_tolerance=ratio_tolerance, green_tolerance=green_tolerance,
+        green_was_clipped=False,
         green_floor_image_units=green_floor, candidate_pairs=[],
         dose_estimate_uM=None, elapsed_time_estimate_hours=None,
         inference='two-observable rectangular compatibility on a discrete grid',
@@ -205,8 +203,19 @@ def decode_snapshot(table, calibration, observation, *, ratio_tolerance, green_t
         reference_independence='declared IDs checked; experimental provenance not independently verified',
         decoder_code_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
     )
-    if image_green <= green_floor:
-        return {**result,'status':'below_detection_floor'}
+    result['status'] = 'below_detection_floor' if image_green <= green_floor else 'ready'
+    return result, predicted_green
+
+
+def decode_snapshot(table, calibration, observation, *, ratio_tolerance, green_tolerance, green_floor):
+    """Decode one snapshot using rectangular two-observable compatibility."""
+    ratio_tolerance = _number(ratio_tolerance, 'ratio_tolerance', positive=True)
+    green_tolerance = _number(green_tolerance, 'green_tolerance', positive=True)
+    result, predicted_green = prepare_snapshot(table, calibration, observation, green_floor=green_floor)
+    result.update(ratio_tolerance=ratio_tolerance, green_tolerance=green_tolerance)
+    if result['status'] == 'below_detection_floor':
+        return result
+    ratio, green = result['ratio_red_green'], result['green_norm']
     ratio_ok = np.abs(table.ratio_table.ratios-ratio) <= ratio_tolerance
     green_ok = np.abs(predicted_green-green) <= green_tolerance
     result['ratio_only_candidate_count'] = int(ratio_ok.sum())

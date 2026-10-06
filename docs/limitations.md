@@ -10,7 +10,8 @@ Things this repository does **not** do, and claims it must not make.
 - A separate two-observable snapshot decoder now uses ratio and two-reference
   normalized green for grid compatibility. It requires explicit observation
   and reference artifacts; the older sample adapter remains ratio-only.
-  Independent experimental calibration and probabilistic uncertainty are open.
+  A separate conditional posterior uses fitted biological-replicate covariance.
+  Independent experimental calibration and empirical coverage validation remain open.
 - Relative ratio calibration assumes a zero-intercept multiplicative mapping
   to model reference values. This is model-conditioned normalization, not
   independent validation of the model or camera. Two-reference green
@@ -25,9 +26,10 @@ Things this repository does **not** do, and claims it must not make.
   measurement of the experimental exposure history.
 - Initial model states have not yet been validated against the experimental
   galactose pre-incubation procedure.
-- No estimator uncertainty is computed. CRLB results from `ichnos-fisher`
-  are theoretical bounds under assumed measurement conditions, not
-  confidence intervals for an implemented estimator.
+- Conditional discrete posterior credible sets are computed with a fixed Gaussian
+  covariance estimated from independent biological summaries. Calibration, covariance
+  estimation and model-parameter uncertainty are not propagated. CRLB results
+  from `ichnos-fisher` remain theoretical bounds, not empirical coverage validation.
 - No copper/CuSO4-specific model or decoder is included.
 
 ## Known weaknesses carried over from the migrated code

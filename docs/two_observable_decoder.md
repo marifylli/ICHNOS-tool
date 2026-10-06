@@ -173,9 +173,9 @@ flat reference spans, missing provenance, fingerprinted artifact changes, floor
 abstention, missing joint matches, no clipping, fresh-model recovery, CLI
 roundtrips, output protection and legacy forward-result agreement.
 
-Posterior inference, correlated biological-replicate noise, calibration
-uncertainty, independent experimental references and full ox/er domain coverage
-remain open. The green mapping does not rescue an ER range where both model
+[Conditional posterior inference](snapshot_posterior.md) now supports correlated
+biological-replicate noise. Calibration uncertainty, independent experimental
+references and full ox/er domain coverage remain open. The green mapping does not rescue an ER range where both model
 observables are insensitive. The existing sample-summary adapter and visual
 report still serve the prior ratio-only workflow; this snapshot CLI uses its
 own explicit observation/calibration artifacts.

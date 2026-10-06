@@ -7,7 +7,7 @@ Ratio-only decoders support discrete/checked continuous dose at known times
 and discrete dose–elapsed-time compatibility. A separate two-observable
 snapshot decoder now uses ratio plus reference-normalized green to retain
 compatible dose/time grid pairs. It requires explicit reference calibration
-and observation metadata. Estimator uncertainty/posteriors remain unimplemented.
+and observation metadata. A conditional two-observable grid posterior is available; experimental coverage and calibration uncertainty remain unvalidated.
 A unique grid match is not proof of identifiability.
 Synthetic verification checks software behavior under stated assumptions;
 experimental recovery accuracy has not been established.
@@ -34,7 +34,7 @@ Migrated code and model sources are recorded in
 | Ratio-only decoders | Discrete dose/time and checked continuous dose implemented |
 | Two-observable snapshot decoder | Ratio + reference-normalized green compatibility on a discrete grid; explicit calibration/observation artifacts, no posterior |
 | End-to-end and visual reports | Implemented for a fixed noise-free synthetic oxidative scenario |
-| Estimator uncertainty | Not implemented |
+| Estimator uncertainty | Conditional grid posterior with fitted biological-replicate covariance; calibration/model/covariance uncertainty not propagated |
 
 Passing tests verify software behaviour under controlled assumptions.
 They do not establish experimental accuracy for dose or time estimation.
@@ -245,3 +245,7 @@ Run `python scripts/verify_snapshot_decoder.py --out-dir outputs/two-observable-
 to verify a late oxidative snapshot with model-dependent synthetic green.
 See [the two-observable decoder](docs/two_observable_decoder.md) for reference
 contracts, CLI usage and the remaining uncertainty/experimental validation work.
+
+### Conditional snapshot posterior
+
+See [snapshot posterior](docs/snapshot_posterior.md) for correlated replicate-noise fitting, explicit priors, discrete credible sets and a synthetic held-out check. This is conditional inference under a fixed model and calibration, not experimental validation.
