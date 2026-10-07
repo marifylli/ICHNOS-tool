@@ -1,6 +1,8 @@
 """focus.score_cells must fall with defocus, ignore exposure/gain, and judge
 each cell against its own background; focus.channel_agreement must catch a
-channel acquired at a different focal plane."""
+channel acquired at a different focal plane, and must refuse to judge when
+the two channels differ too much in contrast for the comparison to mean
+anything."""
 import numpy as np
 import pytest
 from scipy.ndimage import gaussian_filter
@@ -64,6 +66,15 @@ def test_score_never_falls_below_the_floor():
         assert all(s.focus_score >= focus.NO_EDGE_SCORE for s in scored)
 
 
+def test_contrast_to_noise_tracks_cell_brightness():
+    labels, bright = _field(amplitude=80.0, noise=2.0)
+    _, faint = _field(amplitude=8.0, noise=2.0)
+    cnr = lambda img: np.median(
+        [s.contrast_to_noise for s in focus.score_cells(labels, img) if s.scored]
+    )
+    assert cnr(bright) > 5 * cnr(faint)
+
+
 def test_unscorable_cell_is_flagged_not_defaulted():
     """A cell with no background ring must come back NaN and scored=False,
     never a number that downstream code would compare against a threshold."""
@@ -84,6 +95,7 @@ def test_agreement_high_when_both_channels_share_a_focal_plane():
     agreement = focus.channel_agreement(
         focus.score_cells(labels, image), focus.score_cells(labels, other)
     )
+    assert agreement.comparable
     assert agreement.agrees and agreement.agreement > 0.6
 
 
@@ -93,8 +105,34 @@ def test_agreement_low_when_one_channel_is_defocused():
         focus.score_cells(labels, gaussian_filter(image, 6)),
         focus.score_cells(labels, image),
     )
+    # Blur leaves contrast alone, so the comparison is still meaningful.
+    assert agreement.comparable
     assert not agreement.agrees
     assert agreement.median_green < agreement.median_red
+
+
+def test_agreement_refuses_to_judge_a_much_dimmer_channel():
+    """A dim channel scores lower on focus for want of contrast, not for
+    want of focus. The comparison must come back 'cannot tell' rather than
+    reporting a focus difference that the data cannot support."""
+    labels, bright = _field(amplitude=80.0, noise=2.0)
+    _, faint = _field(amplitude=1.5, noise=2.0)  # cells within the noise
+    agreement = focus.channel_agreement(
+        focus.score_cells(labels, faint), focus.score_cells(labels, bright)
+    )
+    assert not agreement.comparable
+    assert not agreement.agrees
+
+
+def test_equally_dim_channels_are_still_comparable():
+    """Modest contrast is not a reason to refuse: the guard is about cells
+    being lost in the noise, not about one channel being dimmer."""
+    labels, faint = _field(amplitude=8.0, noise=2.0)
+    _, other = _field(seed=1, amplitude=40.0, noise=2.0)
+    agreement = focus.channel_agreement(
+        focus.score_cells(labels, faint), focus.score_cells(labels, other)
+    )
+    assert agreement.comparable
 
 
 def test_agreement_reports_not_informative_with_too_few_shared_cells():

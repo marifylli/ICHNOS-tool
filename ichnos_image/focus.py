@@ -18,6 +18,19 @@ reported difficulty focusing):
    ratio is then a focus artefact rather than biology. Nothing in the
    pipeline currently compares the two channels' sharpness.
 
+A caution before the metric: it reads *measured* sharpness, which a noisy
+channel loses as surely as a defocused one. Verified on this session's own
+images — dropping the red channel's contrast to the green channel's while
+leaving the focal plane untouched moved its median score from 1.86 to
+1.59, most of the way to the green channel's 1.36. So a lower score in the
+dimmer channel is not evidence that it was focused differently, and
+`channel_agreement` refuses to draw that conclusion at all when a channel's
+cells are too close to the noise to carry a measurable edge (see
+`comparable` there). On this session the green channel sits at a
+contrast-to-noise ratio near 0.85 — its cells are within the noise — so the
+session's apparent focus difference is reported as "cannot tell" rather
+than as a finding.
+
 The metric is an edge-contrast ratio: the gradient magnitude on the cell's
 boundary band divided by the gradient magnitude in the surrounding
 background ring, both after a small Gaussian smoothing. A sharp cell has a
@@ -64,6 +77,10 @@ class CellFocus:
     #: Edge gradient / background gradient. 1.0 = no detectable edge.
     #: NaN when `scored` is False.
     focus_score: float
+    #: (cell mean - background median) / background noise, from the same
+    #: ring. How much of focus_score the cell's contrast alone could
+    #: explain: two channels' scores are only comparable at similar values.
+    contrast_to_noise: float
     #: False when the cell has too little boundary or background ring to
     #: measure, so the score is NaN rather than a silent 0.0 or 1.0.
     scored: bool
@@ -76,10 +93,19 @@ class ChannelFocusAgreement:
     n_cells: int
     median_green: float
     median_red: float
+    median_cnr_green: float
+    median_cnr_red: float
+
     #: (green - 1) / (red - 1) folded to <= 1, i.e. comparing the two
     #: channels' edge contrast above the no-edge floor. 1.0 means equally
     #: sharp; lower means one channel is blurrier than the other.
     agreement: float
+    #: False when either channel's cells sit too close to the noise for its
+    #: focus score to mean anything. Then `agrees` is False as "cannot
+    #: tell", not as "the channels were focused differently".
+    comparable: bool
+    #: True only when the channels are comparable AND their focus agrees.
+    #: False with comparable=False means "cannot tell", not "disagrees".
     agrees: bool
 
 
@@ -116,7 +142,8 @@ def score_cells(
     if smoothing_sigma_px < 0:
         raise ValueError("smoothing_sigma_px must be non-negative")
 
-    smoothed = gaussian_filter(channel.astype(float), smoothing_sigma_px)
+    image = channel.astype(float)
+    smoothed = gaussian_filter(image, smoothing_sigma_px)
     gy, gx = np.gradient(smoothed)
     gradient = np.hypot(gy, gx)
     occupied = label_mask > 0
@@ -132,21 +159,30 @@ def score_cells(
         ring = binary_dilation(cell, ring_se) & ~occupied[sl]
 
         if boundary.sum() < min_boundary_px or ring.sum() < min_ring_px:
-            scores.append(CellFocus(cell_id, float("nan"), False))
+            scores.append(CellFocus(cell_id, float("nan"), float("nan"), False))
             continue
 
         patch = gradient[sl]
         background = float(np.median(patch[ring]))
         if background <= 0:
-            scores.append(CellFocus(cell_id, float("nan"), False))
+            scores.append(CellFocus(cell_id, float("nan"), float("nan"), False))
             continue
+
+        ring_values = image[sl][ring]
+        ring_level = float(np.median(ring_values))
+        # MAD, not standard deviation: a stray bright speck in the ring
+        # would inflate an SD and make a clean cell look noisy.
+        noise = 1.4826 * float(np.median(np.abs(ring_values - ring_level)))
+        cnr = (float(image[sl][cell].mean()) - ring_level) / noise if noise > 0 else float("nan")
 
         # 75th percentile, not the mean: a cell is rarely in focus on one
         # side and out on the other, but it is routinely overlapped by a
         # neighbour or clipped by the patch edge along part of its
         # boundary, and those stretches drag a mean down.
         edge = float(np.percentile(patch[boundary], 75))
-        scores.append(CellFocus(cell_id, max(edge / background, NO_EDGE_SCORE), True))
+        scores.append(
+            CellFocus(cell_id, max(edge / background, NO_EDGE_SCORE), cnr, True)
+        )
 
     return scores
 
@@ -157,6 +193,7 @@ def channel_agreement(
     *,
     min_agreement: float = 0.6,
     min_cells: int = 5,
+    min_cnr: float = 1.0,
 ) -> ChannelFocusAgreement:
     """Compare two channels' per-cell focus over the cells scored in both.
 
@@ -170,23 +207,40 @@ def channel_agreement(
     Scores are compared above the no-edge floor rather than as raw values:
     a channel at 1.1 and one at 1.3 differ threefold in edge contrast, but
     their raw ratio of 0.85 would read as near-agreement.
+
+    `comparable` guards the whole comparison. A channel whose cells barely
+    rise above their own noise scores low on focus whatever its focal
+    plane, because there is no edge left to measure through the noise; its
+    score cannot be read as sharpness at all, let alone compared with
+    another channel's. Defocus and underexposure both destroy contrast, and
+    one image cannot tell them apart, so the function does not try: below
+    `min_cnr` in either channel it reports "cannot tell" and the fix is in
+    the acquisition (more exposure on the dim channel), not in the
+    analysis.
     """
-    by_id = {s.cell_id: s.focus_score for s in green_scores if s.scored}
+    by_id = {s.cell_id: s for s in green_scores if s.scored}
     pairs = [
-        (by_id[s.cell_id], s.focus_score)
+        (by_id[s.cell_id], s)
         for s in red_scores
         if s.scored and s.cell_id in by_id
     ]
+    nan = float("nan")
     if len(pairs) < min_cells:
         return ChannelFocusAgreement(
-            len(pairs), float("nan"), float("nan"), float("nan"), False
+            len(pairs), nan, nan, nan, nan, nan, False, False
         )
 
-    green = float(np.median([g for g, _ in pairs]))
-    red = float(np.median([r for _, r in pairs]))
+    green = float(np.median([g.focus_score for g, _ in pairs]))
+    red = float(np.median([r.focus_score for _, r in pairs]))
+    cnr_green = float(np.nanmedian([g.contrast_to_noise for g, _ in pairs]))
+    cnr_red = float(np.nanmedian([r.contrast_to_noise for _, r in pairs]))
+
+    comparable = bool(min(cnr_green, cnr_red) >= min_cnr)
+
     above_floor = (green - NO_EDGE_SCORE, red - NO_EDGE_SCORE)
     high = max(above_floor)
     agreement = max(min(above_floor), 0.0) / high if high > 0 else 0.0
     return ChannelFocusAgreement(
-        len(pairs), green, red, agreement, agreement >= min_agreement
+        len(pairs), green, red, cnr_green, cnr_red, agreement,
+        comparable, comparable and agreement >= min_agreement,
     )
