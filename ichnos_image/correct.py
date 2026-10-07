@@ -213,6 +213,17 @@ def apply_shift(channel: np.ndarray, shift_rc: tuple[float, float]) -> np.ndarra
     return ndi_shift(channel.astype(float), shift=shift_rc, order=1, mode="nearest")
 
 
+def register_saturation_mask(mask: np.ndarray, shift_rc: tuple[float, float]) -> np.ndarray:
+    """Flag every output pixel receiving any clipped input in linear registration.
+
+    Use exactly the interpolation/boundary rule of apply_shift. Nearest-neighbour
+    mask interpolation would miss one of the contributors at fractional shifts.
+    """
+    if mask.ndim != 2 or mask.dtype != np.bool_:
+        raise ValueError("saturation mask must be a 2D boolean array")
+    return apply_shift(mask, shift_rc) > 0
+
+
 def unmix_crosstalk(green: np.ndarray, red: np.ndarray, bleed_green_to_red: float) -> tuple[np.ndarray, np.ndarray]:
     """Linear unmixing for GFP -> mCherry channel bleed-through (Stage 4).
 

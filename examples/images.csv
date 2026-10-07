@@ -1,0 +1,2 @@
+session_id,sample_id,condition_id,specimen_id,biological_replicate_id,timepoint,acquisition_order,green_path,red_path,bright_field_path,exposure_ms_green,exposure_ms_red,nd_filter_green,nd_filter_red,objective,burner_hours,lamp_warmup_minutes,gain_setting,sampling_time_hours,measurement_time_hours
+session-1,target-1,unknown,specimen-1,culture-1,0,0,green.tif,red.tif,bright-field.tif,100,100,0,0,40X,1,30,fixed-gain,0.5,0.75

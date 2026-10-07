@@ -39,6 +39,9 @@ def build_records(
     measurement_time_hours: float | None = None,
     sample_id: str | None = None,
     condition_id: str | None = None,
+    specimen_id: str | None = None,
+    biological_replicate_id: str | None = None,
+    acquisition_json: str | None = None,
 ) -> list[CellRecord]:
     """Turn per-cell features + per-image acquisition/QC metadata into schema
     rows. QC flags here are image-level (focus_score, registration_shift_px)
@@ -55,12 +58,20 @@ def build_records(
         ratio = compute_ratio(f.corrected_mean_green, f.corrected_mean_red)
         edge_flag = f.cell_id in edge_flagged_ids
         qc_pass = (
-            not f.sat_flag
+            f.focus_qc_pass
+            and not f.sat_flag
             and not edge_flag
             and not lamp_flag
             and focus_score >= focus_score_threshold
             and registration_shift_px <= registration_shift_threshold_px
         )
+        reasons = []
+        for failed, reason in ((f.sat_flag, 'saturation'), (edge_flag, 'border'),
+            (lamp_flag, 'lamp_warmup'), (not focus_score >= focus_score_threshold, 'field_focus'),
+            (not registration_shift_px <= registration_shift_threshold_px, 'registration'),
+            (not f.focus_qc_pass, f.focus_status)):
+            if failed:
+                reasons.append(reason)
         record = CellRecord(
             session_id=session_id,
             timepoint=timepoint,
@@ -91,6 +102,20 @@ def build_records(
             measurement_time_hours=measurement_time_hours,
             sample_id=sample_id,
             condition_id=condition_id,
+            specimen_id=specimen_id, biological_replicate_id=biological_replicate_id,
+            acquisition_json=acquisition_json,
+            focus_score_green=f.focus_score_green, focus_score_red=f.focus_score_red,
+            contrast_to_noise_green=f.contrast_to_noise_green,
+            contrast_to_noise_red=f.contrast_to_noise_red, focus_agreement=f.focus_agreement,
+            focus_status=f.focus_status, focus_qc_mode=f.focus_qc_mode,
+            qc_reasons=';'.join(reasons),
+            sat_flag_legacy=f.sat_flag_legacy,
+            qc_pass_legacy_saturation=(
+                f.focus_qc_pass and not (f.sat_flag if f.sat_flag_legacy is None else f.sat_flag_legacy)
+                and not edge_flag and not lamp_flag
+                and focus_score >= focus_score_threshold
+                and registration_shift_px <= registration_shift_threshold_px
+            ),
         )
         validate(record)
         records.append(record)
@@ -106,5 +131,16 @@ def export_csv(records: list[CellRecord], out_path: str | Path, append: bool = F
     out_path = Path(out_path)
     df = pd.DataFrame([asdict(r) for r in records], columns=CSV_COLUMNS)
     write_header = not (append and out_path.exists())
-    df.to_csv(out_path, mode="a" if append and out_path.exists() else "w", header=write_header, index=False)
+    if append:
+        # Explicit append is used only on a staged CSV by process_experiment.
+        df.to_csv(out_path, mode="a", header=write_header, index=False)
+    else:
+        from ichnos.artifacts import output_lock
+        from tempfile import TemporaryDirectory
+        import os
+        with output_lock(out_path):
+            with TemporaryDirectory(prefix='.ichnos-', dir=out_path.parent) as directory:
+                staged = Path(directory) / 'cells.csv'
+                df.to_csv(staged, index=False)
+                os.link(staged, out_path)
     return out_path

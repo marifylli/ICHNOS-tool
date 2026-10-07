@@ -1,0 +1,23 @@
+{
+  "image_manifest": "images.csv",
+  "controls": "controls.csv",
+  "data_kind": "experimental",
+  "table": "table.json",
+  "calibration": "calibration.json",
+  "noise": "noise.json",
+  "prior": "prior.json",
+  "max_mahalanobis_squared": 25.0,
+  "credible_mass": 0.95,
+  "min_cells": 3,
+  "image_options": {
+    "green_extraction": "G",
+    "red_extraction": "R",
+    "saturation_value": 255,
+    "focus_policy": {
+      "mode": "enforce",
+      "min_score": null,
+      "min_cnr": 1.0,
+      "min_agreement": 0.6
+    }
+  }
+}

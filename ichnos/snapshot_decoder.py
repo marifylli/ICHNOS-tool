@@ -102,7 +102,7 @@ def _anchor(table, reference):
 def build_snapshot_calibration(
     table, *, session_id, source_kind, acquisition, low_reference, high_reference,
     min_image_span, min_model_span, ratio_calibration, ratio_reference_metadata,
-    ratio_reference_specimen_ids, ratio_reference_replicate_ids,
+    ratio_reference_specimen_ids, ratio_reference_replicate_ids, summary_method=None,
 ):
     """Bind two fixed-time green anchors and an existing ratio calibration.
 
@@ -146,6 +146,8 @@ def build_snapshot_calibration(
         high_reference_saturation_validated=False, reference_independence='declared IDs only',
         experimentally_validated=False, uncertainty_estimated=False,
     )
+    if summary_method is not None:
+        data['summary_method'] = _nonempty(summary_method, 'summary_method')
     # Detach mutable caller dictionaries before signing.
     data = json.loads(json.dumps(data, allow_nan=False))
     return {**data, 'artifact_id':_digest(data)}
@@ -156,7 +158,8 @@ def validate_snapshot_calibration(table, calibration):
     keys = ('session_id','source_kind','acquisition','low_reference','high_reference',
             'min_image_span','min_model_span','ratio_calibration','ratio_reference_metadata',
             'ratio_reference_specimen_ids','ratio_reference_replicate_ids')
-    expected = build_snapshot_calibration(table, **{key:calibration[key] for key in keys})
+    expected = build_snapshot_calibration(table, **{key:calibration[key] for key in keys},
+                                          summary_method=calibration.get('summary_method'))
     if expected != calibration:
         raise ValueError('calibration differs from table or recorded reference mapping')
 

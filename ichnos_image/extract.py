@@ -26,6 +26,15 @@ class CellFeatures:
     sat_flag: bool
     local_background_green: float
     local_background_red: float
+    sat_flag_legacy: bool | None = None
+    focus_score_green: float | None = None
+    focus_score_red: float | None = None
+    contrast_to_noise_green: float | None = None
+    contrast_to_noise_red: float | None = None
+    focus_agreement: float | None = None
+    focus_status: str = 'not_evaluated'
+    focus_qc_pass: bool = True
+    focus_qc_mode: str = 'report'
 
 
 def extract_per_cell(
@@ -39,6 +48,8 @@ def extract_per_cell(
     annulus_width_px: int = 3,
     subtract_local_background: bool = True,
     raw_saturation_mask: np.ndarray | None = None,
+    legacy_saturation_mask: np.ndarray | None = None,
+    cell_focus: dict | None = None,
 ) -> list[CellFeatures]:
     """Per-cell mean/integrated intensity (Stage 5).
 
@@ -144,6 +155,7 @@ def extract_per_cell(
         features.append(
             CellFeatures(
                 cell_id=cell_id,
+                **((cell_focus or {}).get(cell_id, {})),
                 area_px=int(region.area),
                 raw_mean_green=float(raw_g.mean()),
                 raw_mean_red=float(raw_r.mean()),
@@ -154,6 +166,8 @@ def extract_per_cell(
                 sat_flag=sat,
                 local_background_green=local_bg_g,
                 local_background_red=local_bg_r,
+                sat_flag_legacy=(bool(legacy_saturation_mask[mask].any())
+                                 if legacy_saturation_mask is not None else sat),
             )
         )
     return features

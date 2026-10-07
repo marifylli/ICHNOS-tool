@@ -16,13 +16,18 @@ class CalibrationBinding:
     reference_id: str
 
 
+SUMMARY_METHOD = 'paired_cell_medians_v1'
+IDENTITY_COLUMNS = ['specimen_id', 'biological_replicate_id', 'acquisition_json']
+
 GROUP_COLUMNS = ["session_id", "sample_id", "condition_id", "timepoint"]
 ACQUISITION_COLUMNS = [
     "sampling_time_hours", "measurement_time_hours", "exposure_ms_green",
     "exposure_ms_red", "nd_filter_green", "nd_filter_red", "objective",
 ]
 SUMMARY_COLUMNS = [
-    *GROUP_COLUMNS, *ACQUISITION_COLUMNS,
+    *GROUP_COLUMNS, *ACQUISITION_COLUMNS, *IDENTITY_COLUMNS,
+    'corrected_green_median', 'corrected_green_q25', 'corrected_green_q75',
+    'summary_method', 'summary_status', 'min_cells', 'green_floor',
     "n_cells_total", "n_cells_qc_pass", "n_cells_used", "n_images",
     "ratio_red_green_median", "ratio_red_green_q25", "ratio_red_green_q75",
     "calibrated_ratio_red_green_median", "calibrated_ratio_red_green_q25",
@@ -57,6 +62,9 @@ def summarize_cells(
     if missing:
         raise ValueError(f"missing cell columns: {sorted(missing)}")
     frame = cells.copy()
+    for name in IDENTITY_COLUMNS:
+        if name not in frame:
+            frame[name] = None
     if "condition_id" not in frame:
         frame["condition_id"] = None
     for name in ("session_id", "sample_id"):
@@ -87,7 +95,7 @@ def summarize_cells(
     rows = []
     for key, group in frame.groupby(GROUP_COLUMNS, dropna=False, sort=False):
         row = dict(zip(GROUP_COLUMNS, key))
-        for name in ACQUISITION_COLUMNS:
+        for name in [*ACQUISITION_COLUMNS, *IDENTITY_COLUMNS]:
             if group[name].nunique(dropna=False) != 1:
                 raise ValueError(f"inconsistent {name} within sample/timepoint {key}")
             value = group[name].iloc[0]
@@ -105,7 +113,9 @@ def summarize_cells(
         row.update(
             n_cells_total=len(group), n_cells_qc_pass=int(group.qc_pass.sum()),
             n_cells_used=len(used), n_images=int(group.acquisition_order.nunique()),
-            data_kind=data_kind,
+            data_kind=data_kind, summary_method=SUMMARY_METHOD,
+            summary_status='ready' if len(used) >= min_cells else 'insufficient_cells',
+            min_cells=min_cells, green_floor=green_floor,
         )
         for column in SUMMARY_COLUMNS:
             if column not in row:
@@ -113,6 +123,8 @@ def summarize_cells(
         if len(used) >= min_cells:
             q25, median, q75 = np.quantile(used, [.25, .5, .75])
             row.update(ratio_red_green_median=median, ratio_red_green_q25=q25, ratio_red_green_q75=q75)
+            g25, g50, g75 = np.quantile(green[eligible], [.25, .5, .75])
+            row.update(corrected_green_median=g50, corrected_green_q25=g25, corrected_green_q75=g75)
         if calibrations is not None:
             binding = calibrations[row["session_id"]]
             calibration = binding.calibration

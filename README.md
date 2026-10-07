@@ -24,7 +24,7 @@ Migrated code and model sources are recorded in
 | Image pipeline (`ichnos_image`) | Implemented; computational tests pass |
 | RGB extraction | Explicit CLI/API selection; experimental mapping unresolved |
 | Saturation QC | Checked before RGB extraction and forwarded through the pipeline |
-| Shared schema (`ichnos.schema`) | Migrated; schema versioning pending |
+| Shared schema (`ichnos.schema`) | Extended cell fields; versioned image-run manifests |
 | SBML models and builder (`ichnos.build`) | Migrated for ox and er |
 | Shared simulator (`ichnos.simulate`) | Implemented with solver settings and observable selections |
 | Parameter profiles (`ichnos.params`) | Packaged; value, unit and provenance checks implemented |
@@ -32,7 +32,7 @@ Migrated code and model sources are recorded in
 | Experimental exposure protocol | Constant-stress baseline and optional first-order clearance with an explicit rate in h^-1; observation times supplied in hours; computational equilibration or explicit finite preincubation with initialization assumptions recorded |
 | Measurement mapping and session calibration | Model fluorescence exports, relative ratio scaling and two-reference green normalization implemented; independent experimental calibration remains open |
 | Ratio-only decoders | Discrete dose/time and checked continuous dose implemented |
-| Two-observable snapshot decoder | Ratio + reference-normalized green compatibility on a discrete grid; explicit calibration/observation artifacts, no posterior |
+| Two-observable snapshot decoder | Ratio + reference-normalized green compatibility on a discrete grid; explicit calibration/observation artifacts; separate conditional posterior |
 | End-to-end and visual reports | Implemented for a fixed noise-free synthetic oxidative scenario |
 | Estimator uncertainty | Conditional grid posterior with fitted biological-replicate covariance; calibration/model/covariance uncertainty not propagated |
 
@@ -42,6 +42,16 @@ They do not establish experimental accuracy for dose or time estimation.
 
 See [the decoder scientific review](docs/decoder_scientific_review.md) for
 reproduced counterexamples, calibration diagnostics and the required two-observable design.
+
+## Integrated image-to-posterior workflow
+
+The image pipeline now registers saturation masks with red-channel interpolation,
+exports per-cell focus/CNR diagnostics, publishes CSVs with no-overwrite manifests,
+and summarizes paired ratio/green measurements. `scripts/run_workflow.py` connects
+these summaries to snapshot compatibility or a conditional posterior and writes
+QC/rejection reports. Enforced focus QC requires explicit local thresholds.
+See [the complete workflow and migration notes](docs/integrated_workflow.md),
+including artifact compatibility and the ox/er off-grid robustness benchmark.
 
 ## Install
 
@@ -200,7 +210,7 @@ documented in [docs/population_summary.md](docs/population_summary.md).
 3. Extend interpolation verification and grid refinement to the intended
    operating domain and sharp-response regions.
 4. Validate two-reference green calibration independently, test snapshot
-   identifiability across the intended domain and add replicate-based likelihoods.
+   identifiability across the intended domain and validate replicate-based likelihoods.
 5. Validate the workflow against experimental references for each variant.
 
 Copper/CuSO4 modelling is outside the current implementation scope.
