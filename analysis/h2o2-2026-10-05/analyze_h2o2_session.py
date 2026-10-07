@@ -14,9 +14,11 @@ Steps
   4. Linearity check: cell-free background vs recorded exposure.
   5. Segment on mCherry (flat-corrected, high-pass, MAD threshold).
   6. Per cell: annulus background, flat correction, ratio R/G, green/exposure.
-  7. Per-cell focus score in each channel (ichnos_image.focus) and
-     green-vs-red focus agreement per image; cells below the focus
-     percentile cutoff are dropped and disagreeing images are flagged.
+  7. Per-cell focus score and contrast-to-noise in each channel
+     (ichnos_image.focus); cells below the focus percentile cutoff are
+     dropped. Images are flagged either as focus-not-comparable (a channel
+     is within the noise, so its focus score cannot be read) or, when both
+     channels carry enough contrast, as channels-disagree-on-focus.
   8. Per-condition medians with bootstrap 95% CI, plots, overlays.
 
 Usage
@@ -271,13 +273,19 @@ def main():
             focus_green=getattr(agreement, "median_green", np.nan),
             focus_red=getattr(agreement, "median_red", np.nan),
             focus_agreement=getattr(agreement, "agreement", np.nan),
+            cnr_green=getattr(agreement, "median_cnr_green", np.nan),
+            cnr_red=getattr(agreement, "median_cnr_red", np.nan),
+            focus_comparable=getattr(agreement, "comparable", False),
             focus_agrees=getattr(agreement, "agrees", False),
             n_focus_cells=getattr(agreement, "n_cells", 0),
         )
         name = f"{row.dose_label}_{row.time_label}_{row.field}.png"
         overlay(red, labels, kept, args.out_dir / "overlays" / name, dark, flat_r)
         focus_note = ""
-        if agreement is not None and not agreement.agrees:
+        if agreement is not None and not agreement.comparable:
+            focus_note = (f"  [?] focus not comparable: contrast-to-noise green "
+                          f"{agreement.median_cnr_green:.2f} vs red {agreement.median_cnr_red:.2f}")
+        elif agreement is not None and not agreement.agrees:
             focus_note = (f"  [!] channels disagree on focus: green {agreement.median_green:.2f} "
                           f"vs red {agreement.median_red:.2f}")
         print(f"{row.dose_label:>6} {row.time_label:>6} {row.field}: "
@@ -364,9 +372,14 @@ def main():
         focus=dict(
             cutoff_on_focus_red=focus_cutoff,
             cells_dropped_out_of_focus=int((~cells.in_focus.fillna(True)).sum()),
+            images_where_focus_is_not_comparable=summary.loc[
+                ~summary.focus_comparable, ["dose_label", "time_label", "field",
+                                            "cnr_green", "cnr_red"]
+            ].to_dict("records"),
             images_with_channel_focus_disagreement=summary.loc[
-                ~summary.focus_agrees, ["dose_label", "time_label", "field",
-                                        "focus_green", "focus_red", "focus_agreement"]
+                summary.focus_comparable & ~summary.focus_agrees,
+                ["dose_label", "time_label", "field",
+                 "focus_green", "focus_red", "focus_agreement"]
             ].to_dict("records"),
         ),
         open_questions=["exposure history between sampling and imaging (Q1)",
@@ -374,6 +387,8 @@ def main():
                         "one flask per dose? (Q3)"],
         caveats=["error bars resample cells within one field, not biological replicates",
                  "a ratio from an image whose channels disagree on focus is a focus artefact",
+                 "where focus is not comparable, a low green focus score means low contrast, "
+                 "not necessarily defocus",
                  "flat field estimated from the data with an approximate dark level",
                  "mCherry-based segmentation; clusters above max_area excluded"],
     )
