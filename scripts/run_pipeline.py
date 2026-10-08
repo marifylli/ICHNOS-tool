@@ -17,6 +17,9 @@ Optional timing columns:
 sampling_time_hours, measurement_time_hours
 Optional sample identity columns:
 sample_id, condition_id (sample_id is required by the separate summary CLI)
+expect_cells: "false" for a frame that should hold no cells at all, such as
+a medium-only control. Segmentation QC then inverts for that frame: empty is
+the expected result, and finding cells is the failure. Defaults to true.
 
 Both are actual elapsed hours from stress onset. Missing values remain
 unknown. timepoint is a point identifier, not an elapsed time in hours.
@@ -161,8 +164,21 @@ def main():
         max_foreground_fraction=args.max_foreground_fraction,
     )
 
+    # Absent when process_experiment is stubbed out (tests), so treat a
+    # missing manifest as "nothing refused" rather than failing the run
+    # after it has already produced its CSV.
+    run_manifest = Path(str(out_path) + ".manifest.json")
+    refused = (
+        json.loads(run_manifest.read_text()).get("refused_image_sets", [])
+        if run_manifest.exists() else []
+    )
+    if refused:
+        print(f"\n{len(refused)} image set(s) refused by segmentation QC and left out of the CSV:")
+        for item in refused:
+            print(f"  - {item['sample_id']}: {item['reason']}")
+
     df = pd.read_csv(out_path)
-    print(f"\n{len(image_sets)} image set(s) -> {len(df)} cell records -> {out_path}")
+    print(f"\n{len(image_sets) - len(refused)}/{len(image_sets)} image set(s) -> {len(df)} cell records -> {out_path}")
     print(df.groupby("session_id").agg(n_cells=("cell_id", "count"), qc_pass_frac=("qc_pass", "mean")))
 
 

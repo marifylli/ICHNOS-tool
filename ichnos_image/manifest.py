@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from skimage.color import rgb2gray
 
+import numpy as np
 import pandas as pd
 from ichnos_image.instrument import SATURATION_VALUE
 from ichnos.schema import validate_elapsed_hours, validate_optional_identifier
@@ -41,6 +42,35 @@ def _optional_identifier(row, name):
         return None
     return validate_optional_identifier(str(value), field_name=name)
 
+_FALSE_WORDS = {"false", "0", "no", "n", "blank", "none"}
+_TRUE_WORDS = {"true", "1", "yes", "y"}
+
+
+def _optional_expect_cells(row) -> bool:
+    """Read the optional expect_cells column; default True.
+
+    Spelled out in words rather than left to pandas' truthiness because a
+    manifest is hand-edited: "no" and "false" and an empty cell all turn up,
+    and the quiet failure -- a blank control read as expecting cells --
+    looks exactly like a segmentation failure in the QC output.
+    """
+    value = getattr(row, "expect_cells", None)
+    if value is None or (not isinstance(value, str) and pd.isna(value)):
+        return True
+    if isinstance(value, (bool, np.bool_)):
+        return bool(value)
+    text = str(value).strip().lower()
+    if text == "":
+        return True
+    if text in _FALSE_WORDS:
+        return False
+    if text in _TRUE_WORDS:
+        return True
+    raise ValueError(
+        f"expect_cells must be one of {sorted(_TRUE_WORDS | _FALSE_WORDS)} or empty, got {value!r}"
+    )
+
+
 def _build_image_sets(
     manifest_path: Path,
     *,
@@ -56,6 +86,7 @@ def _build_image_sets(
     image_sets = []
 
     for row in manifest.itertuples():
+        expect_cells = _optional_expect_cells(row)
         sample_id = _optional_identifier(row, "sample_id")
         condition_id = _optional_identifier(row, "condition_id")
         sampling_time_hours = _optional_elapsed_hours(
@@ -121,6 +152,7 @@ def _build_image_sets(
                 measurement_time_hours=measurement_time_hours,
                 sample_id=sample_id,
                 condition_id=condition_id,
+                expect_cells=expect_cells,
                 specimen_id=_optional_identifier(row, 'specimen_id'),
                 biological_replicate_id=_optional_identifier(row, 'biological_replicate_id'),
                 acquisition_json=json.dumps(dict(

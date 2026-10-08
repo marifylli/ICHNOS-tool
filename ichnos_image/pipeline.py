@@ -35,10 +35,12 @@ class SegmentationQCError(RuntimeError):
     not a worse measurement of the right thing, they are a measurement of
     something else, and QC that let them through would be read as a pass.
 
-    This stops the batch. That is the intent: on the team's 2026-10-05
-    session the unguarded failure produced 20390 "cells" from 5 frames and
-    took 15 hours, because every later stage runs per cell. Catch it per
-    image set if a batch should survive one bad frame.
+    process_image_set raises it; _process_experiment catches it per frame,
+    records the refusal and carries on. That split is deliberate: the one
+    frame is unusable, the other frames are not, and an aborted batch
+    discards good work that has already been paid for -- on the team's
+    2026-10-05 session an abort on the last frame threw away 24 processed
+    frames and half an hour.
     """
 
 
@@ -80,6 +82,12 @@ class ImageSet:
     condition_id: str | None = None
     specimen_id: str | None = None
     biological_replicate_id: str | None = None
+    #: False for a frame that should contain no cells at all -- a
+    #: medium-only control, a blank. The segmentation QC then inverts: an
+    #: empty result is the expected one, and finding cells is the failure,
+    #: because it means either contamination or a threshold low enough to
+    #: be reading noise as cells on every other frame in the session.
+    expect_cells: bool = True
     acquisition_json: str | None = None
     source_paths: tuple[str, ...] = ()
 
@@ -110,6 +118,7 @@ def process_image_set(
     focus_policy: FocusPolicy | None = None,
     min_foreground_fraction: float = 0.001,
     max_foreground_fraction: float = 0.2,
+    blank_max_foreground_fraction: float = 0.01,
 ) -> list[CellRecord]:
     """Run Stages 2-5+8 on one image set, given a pre-calibrated crosstalk
     coefficient (from correct.calibrate_crosstalk_from_control(), once per
@@ -149,16 +158,26 @@ def process_image_set(
     # yeast field sits at a few percent -- so that passing says only "not
     # obviously broken", never "segmented well".
     fraction = segment.foreground_fraction(labels)
-    if not min_foreground_fraction <= fraction <= max_foreground_fraction:
+    where = (f"session {image_set.session_id!r}, sample {image_set.sample_id!r}, "
+             f"method {segmentation_method!r}")
+    if not image_set.expect_cells:
+        if fraction > blank_max_foreground_fraction:
+            raise SegmentationQCError(
+                f"a frame declared cell-free claimed {fraction:.1%} of itself as cells "
+                f"({labels.max()} objects), above {blank_max_foreground_fraction:.1%}; {where}. "
+                "Either the frame is not blank, or the threshold is low enough to be "
+                "reading noise as cells -- in which case every other frame in this "
+                "session is affected too."
+            )
+    elif not min_foreground_fraction <= fraction <= max_foreground_fraction:
         raise SegmentationQCError(
             f"segmentation claimed {fraction:.1%} of the frame as cells "
             f"({labels.max()} objects), outside the plausible "
-            f"{min_foreground_fraction:.1%}-{max_foreground_fraction:.1%}; "
-            f"session {image_set.session_id!r}, sample {image_set.sample_id!r}, "
-            f"method {segmentation_method!r}. Too high means the threshold fell "
-            "inside the background and the objects are noise; too low means it "
-            "fell above the signal and only the brightest cells survived. "
-            "For fluorescence frames try segmentation_method='sparse'."
+            f"{min_foreground_fraction:.1%}-{max_foreground_fraction:.1%}; {where}. "
+            "Too high means the threshold fell inside the background and the objects "
+            "are noise; too low means it fell above the signal and only the brightest "
+            "cells survived. For fluorescence frames try segmentation_method='sparse'; "
+            "for a frame that genuinely holds no cells set ImageSet.expect_cells=False."
         )
 
     green, red = image_set.green, image_set.red
@@ -267,6 +286,8 @@ def _process_experiment(
     focus_policy: FocusPolicy | None = None,
     min_foreground_fraction: float = 0.001,
     max_foreground_fraction: float = 0.2,
+    blank_max_foreground_fraction: float = 0.01,
+    refusals: list | None = None,
 ) -> Path:
     """Process every image set and write one combined CSV (Stage 8, final
     dataset -- every cell, every timepoint, every session in one file).
@@ -307,6 +328,7 @@ def _process_experiment(
             stacklevel=2,
         )
 
+    refused = refusals if refusals is not None else []
     for image_set in image_sets:
         bleed = (
             bleed_green_to_red[image_set.session_id]
@@ -322,21 +344,36 @@ def _process_experiment(
             flat_field_red.get(image_set.session_id) if isinstance(flat_field_red, dict) else flat_field_red
         )
 
-        records = process_image_set(
-            image_set,
-            bleed_green_to_red=bleed,
-            flat_field_green=flat_g,
-            flat_field_red=flat_r,
-            segmentation_method=segmentation_method,
-            segmentation_kwargs=segmentation_kwargs,
-            background_method=background_method,
-            rolling_ball_radius=rolling_ball_radius,
-            focus_policy=focus_policy,
-            min_foreground_fraction=min_foreground_fraction,
-            max_foreground_fraction=max_foreground_fraction,
-        )
+        try:
+            records = process_image_set(
+                image_set,
+                bleed_green_to_red=bleed,
+                flat_field_green=flat_g,
+                flat_field_red=flat_r,
+                segmentation_method=segmentation_method,
+                segmentation_kwargs=segmentation_kwargs,
+                background_method=background_method,
+                rolling_ball_radius=rolling_ball_radius,
+                focus_policy=focus_policy,
+                min_foreground_fraction=min_foreground_fraction,
+                max_foreground_fraction=max_foreground_fraction,
+                blank_max_foreground_fraction=blank_max_foreground_fraction,
+            )
+        except SegmentationQCError as error:
+            # One unusable frame is not a reason to discard the frames that
+            # already processed. The refusal is carried out to the manifest
+            # instead, so a run that silently has fewer frames than its
+            # manifest cannot be mistaken for a complete one.
+            refused.append(dict(session_id=image_set.session_id, sample_id=image_set.sample_id,
+                                acquisition_order=image_set.acquisition_order, reason=str(error)))
+            continue
         export.export_csv(records, out_csv, append=True)
 
+    if len(refused) == len(image_sets):
+        raise SegmentationQCError(
+            f"every one of the {len(image_sets)} frames was refused, so there is no "
+            f"output to publish. First: {refused[0]['reason']}"
+        )
     return out_csv
 
 
@@ -378,9 +415,12 @@ def process_experiment(image_sets, out_csv, *, input_paths=(), **options):
                 lamp_warmup_minutes=LAMP_WARMUP_THRESHOLD_MINUTES),
             inputs=fingerprints, images=[{f.name: describe(getattr(item, f.name))
                                          for f in fields(item)} for item in image_sets],
-            options=describe(effective), saturation_registration="linear-support, red-to-green frame",
+            options=describe({k: v for k, v in effective.items() if k != "refusals"}),
+            saturation_registration="linear-support, red-to-green frame",
             photobleaching_corrected=False)
-        _process_experiment(image_sets, csv, **options)
+        refusals = []
+        _process_experiment(image_sets, csv, refusals=refusals, **options)
+        metadata["refused_image_sets"] = refusals
         if file_fingerprints(sources) != fingerprints:
             raise ValueError("input files changed during processing")
         return metadata
