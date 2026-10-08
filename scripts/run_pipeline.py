@@ -73,8 +73,11 @@ def main():
         help="fallback bleed_green_to_red for sessions not in --controls (illustrative use only)",
     )
     parser.add_argument("--out", required=True, type=Path, help="output combined CSV path")
-    parser.add_argument("--segmentation-method", default="otsu", choices=["otsu", "sparse", "cellpose"],
-                        help="'sparse' for fluorescence frames where cells are a few percent of the pixels")
+    parser.add_argument("--segmentation-method", default="otsu",
+                        choices=["otsu", "sparse", "transmitted", "cellpose"],
+                        help="'sparse' for fluorescence frames where cells are a few percent of "
+                             "the pixels; 'transmitted' for bright-field, where cells are dark "
+                             "rims with bright halos rather than bright objects")
     parser.add_argument(
         "--cellpose-gpu", action="store_true",
         help="use GPU for cellpose (--segmentation-method cellpose only)",
@@ -123,7 +126,13 @@ def main():
     parser.add_argument("--segmentation-source", default="sum",
                         choices=["sum", "green", "red", "brightfield"],
                         help="which image the cell masks are cut from; 'sum' keeps the red/green "
-                             "ratio from being tilted by the channel that chose the cells")
+                             "ratio from being tilted by the channel that chose the cells. "
+                             "'brightfield' is the only genuinely independent choice: it needs a "
+                             "bright_field_path per row, is normally paired with "
+                             "--segmentation-method transmitted, and uses the optional "
+                             "brightfield_shift_dy/dx columns to put the masks on the "
+                             "fluorescence frames (scripts/align_brightfield.py measures both "
+                             "those offsets and whether the frame shows the same field at all)")
     parser.add_argument('--min-foreground-fraction', type=float, default=0.001,
                         help="refuse a frame whose segmentation claims less of it than this")
     parser.add_argument('--max-foreground-fraction', type=float, default=0.2,

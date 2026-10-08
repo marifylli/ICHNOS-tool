@@ -66,6 +66,10 @@ def segment_cells(
     scripts/estimate_cellpose_throughput.py to turn that per-image number
     into a "how long will my real batch take" estimate.
 
+    method="transmitted" is for bright-field frames, where cells are dark
+    rims with bright halos rather than bright objects; see
+    _segment_transmitted. "sparse" on such a frame returns the halos.
+
     method="otsu" (default) is a classical Otsu + watershed fallback with no
     heavy dependencies, good enough for tests/prototyping.
 
@@ -95,7 +99,81 @@ def segment_cells(
         return _segment_otsu(bf_image, min_size=min_size)
     if method == "sparse":
         return _segment_sparse(bf_image, min_size=min_size, **cellpose_kwargs)
+    if method == "transmitted":
+        return _segment_transmitted(bf_image, min_size=min_size, **cellpose_kwargs)
     raise ValueError(f"unknown segmentation method: {method!r}")
+
+
+def _segment_transmitted(
+    image: np.ndarray,
+    *,
+    min_size: int = 200,
+    texture_window_px: int = 9,
+    noise_sigmas: float = 2.5,
+    closing_px: int = 2,
+    erosion_px: int = 8,
+) -> np.ndarray:
+    """Segment a bright-field frame, where cells are neither bright nor dark.
+
+    A yeast cell in transmitted light is a dark rim with a bright halo on a
+    bright, unevenly lit background. Its interior is often the same grey as
+    the background, so thresholding intensity in either direction finds rims
+    and halos rather than cells, and "sparse" -- which looks for bright
+    blobs -- returns the halos. What separates cell from background here is
+    not brightness but structure: the background is smooth and the cells are
+    not, at the scale of a few pixels. This thresholds local standard
+    deviation, which measures exactly that and is indifferent to the slow
+    illumination gradient across the frame.
+
+    The masks come out wider than the cells, because the halo is textured
+    too. On synthetic cells of known size the raw mask was three times their
+    area; erosion brings it back to roughly cell-sized, which matters when
+    the mask is used to register against another image -- it sharpened the
+    recovered displacement from (+20, -20) to the true (+17, -23). Erosion
+    is backed off rather than applied blindly, since a cell smaller than the
+    radius asked for would simply disappear.
+    """
+    if texture_window_px < 2 or noise_sigmas <= 0 or closing_px < 0 or erosion_px < 0:
+        raise ValueError(
+            "texture_window_px must be >= 2, noise_sigmas > 0, "
+            "closing_px and erosion_px >= 0"
+        )
+    data = np.asarray(image, dtype=float)
+    if not np.isfinite(data).all():
+        raise ValueError("image must be finite")
+
+    texture = _local_std(ndi.median_filter(data, 3), texture_window_px)
+    middle = float(np.median(texture))
+    noise = 1.4826 * float(np.median(np.abs(texture - middle)))
+    if noise == 0:
+        return np.zeros(data.shape, dtype=np.int32)
+
+    binary = texture > middle + noise_sigmas * noise
+    if closing_px:
+        binary = ndi.binary_closing(binary, morphology.disk(closing_px))
+    binary = ndi.binary_fill_holes(binary)
+    binary = _remove_objects_below_size(binary, min_size)
+    binary = _erode_keeping_objects(binary, erosion_px)
+    return _split_touching(binary)
+
+
+def _local_std(image: np.ndarray, window: int) -> np.ndarray:
+    mean = ndi.uniform_filter(image, window)
+    return np.sqrt(np.maximum(ndi.uniform_filter(image * image, window) - mean * mean, 0.0))
+
+
+def _erode_keeping_objects(binary: np.ndarray, radius: int, keep: float = 0.5) -> np.ndarray:
+    """Erode as far as possible while at least `keep` of the objects survive."""
+    if radius <= 0:
+        return binary
+    before = ndi.label(binary)[1]
+    if before == 0:
+        return binary
+    for current in range(radius, 0, -1):
+        candidate = ndi.binary_erosion(binary, morphology.disk(current))
+        if ndi.label(candidate)[1] >= keep * before:
+            return candidate
+    return binary
 
 
 def _segment_resized(bf_image: np.ndarray, *, method: str, min_size: int, resize_factor: float, **cellpose_kwargs) -> np.ndarray:

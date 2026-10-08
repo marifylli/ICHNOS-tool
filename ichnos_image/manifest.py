@@ -46,6 +46,30 @@ _FALSE_WORDS = {"false", "0", "no", "n", "blank", "none"}
 _TRUE_WORDS = {"true", "1", "yes", "y"}
 
 
+def _optional_shift(row, name: str) -> float:
+    """Read an optional bright-field registration offset; default 0.
+
+    A missing or blank cell means "not measured", which is treated as no
+    shift. That is the right default only because an unmeasured shift is
+    usually small; where it is not, the masks land on background and the
+    run says so through the foreground and per-cell QC rather than quietly
+    reporting the background as cells.
+    """
+    value = getattr(row, name, None)
+    if value is None or (not isinstance(value, str) and pd.isna(value)):
+        return 0.0
+    text = str(value).strip()
+    if text == "":
+        return 0.0
+    try:
+        shift = float(text)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a number of pixels, got {value!r}") from exc
+    if not np.isfinite(shift):
+        raise ValueError(f"{name} must be finite, got {value!r}")
+    return shift
+
+
 def _optional_expect_cells(row) -> bool:
     """Read the optional expect_cells column; default True.
 
@@ -138,6 +162,8 @@ def _build_image_sets(
                 green_saturation_mask=green_saturation,
                 red_saturation_mask=red_saturation,
                 bright_field=bright_field,
+                brightfield_shift_dy=_optional_shift(row, "brightfield_shift_dy"),
+                brightfield_shift_dx=_optional_shift(row, "brightfield_shift_dx"),
                 session_id=str(row.session_id),
                 timepoint=int(row.timepoint),
                 acquisition_order=int(row.acquisition_order),

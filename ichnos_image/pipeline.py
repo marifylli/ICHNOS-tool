@@ -44,6 +44,22 @@ class SegmentationQCError(RuntimeError):
     """
 
 
+class MissingBrightfieldError(SegmentationQCError, ValueError):
+    """Bright-field masks were asked for on a frame that has no bright-field.
+
+    Both parents on purpose. Called directly it is a ValueError, because a
+    caller that asks for a mask source it did not supply has made a
+    programming mistake. Inside a batch it is a SegmentationQCError, because
+    there it is a property of the data: in the team's 2026-10-05 session the
+    bright-field frame covers one field per folder, so the folders imaged at
+    two fields have a second field with no bright-field of its own. Those
+    frames must be refused and recorded, not quietly segmented off a
+    fluorescence channel -- a silent fallback would put a different mask
+    source on some rows of one run, which is exactly the confusion that
+    mask_source exists to prevent.
+    """
+
+
 class CrosstalkCalibrationWarning(UserWarning):
     """Raised when one scalar crosstalk coefficient is applied across several
     imaging sessions. A subclass of UserWarning, so existing UserWarning
@@ -71,6 +87,16 @@ class ImageSet:
     burner_hours: float
     lamp_warmup_minutes: float
     bright_field: np.ndarray | None = None  # None -> segment off the green channel instead
+    #: Displacement, in pixels, from the bright-field frame to the
+    #: fluorescence frames of the same field. Changing the filter cube moves
+    #: the image by a few pixels even with the stage untouched, and nudging
+    #: the stage between the two exposures moves it by more: measured on the
+    #: team's 2026-10-05 session, 3-9 px on most fields and up to 157 px on
+    #: a few. Unapplied, a shift of that size puts every mask on background.
+    #: Estimate it with scripts/align_brightfield.py, which also says whether
+    #: the bright-field frame shows the same field at all.
+    brightfield_shift_dy: float = 0.0
+    brightfield_shift_dx: float = 0.0
     saturation_value: float = 65535.0
     raw_saturation_mask: np.ndarray | None = None
     green_saturation_mask: np.ndarray | None = None
@@ -127,7 +153,7 @@ def _segmentation_source(image_set, choice: str):
         raise ValueError(f"segmentation_source must be one of {SEGMENTATION_SOURCES}, got {choice!r}")
     if choice == "brightfield":
         if image_set.bright_field is None:
-            raise ValueError(
+            raise MissingBrightfieldError(
                 "segmentation_source='brightfield' needs ImageSet.bright_field, which is None. "
                 "Supply the bright-field frame of the same field of view, or choose 'sum'."
             )
@@ -137,6 +163,28 @@ def _segmentation_source(image_set, choice: str):
     if choice == "red":
         return image_set.red, "red"
     return image_set.green + image_set.red, "green+red"
+
+
+def _shift_labels(labels: np.ndarray, dy: float, dx: float) -> np.ndarray:
+    """Translate a label mask onto the fluorescence frame.
+
+    Translated, not rolled: a rolled mask brings the cells that leave one
+    edge back in at the opposite one, where they would be measured against
+    whatever fluorescence happens to be there. Cells that move off the frame
+    are gone, which is the honest outcome -- on a 157 px shift that is a few
+    percent of the field.
+    """
+    dy, dx = int(round(dy)), int(round(dx))
+    if dy == 0 and dx == 0:
+        return labels
+    out = np.zeros_like(labels)
+    rows, cols = labels.shape
+    if abs(dy) >= rows or abs(dx) >= cols:
+        return out
+    out[max(dy, 0):rows + min(dy, 0), max(dx, 0):cols + min(dx, 0)] = labels[
+        max(-dy, 0):rows - max(dy, 0), max(-dx, 0):cols - max(dx, 0)
+    ]
+    return out
 
 
 def process_image_set(
@@ -186,6 +234,8 @@ def process_image_set(
         raise ValueError("saturation_value must be finite and positive")
     source_image, mask_source = _segmentation_source(image_set, segmentation_source)
     labels = segment.segment_cells(source_image, method=segmentation_method, **(segmentation_kwargs or {}))
+    if mask_source == "brightfield":
+        labels = _shift_labels(labels, image_set.brightfield_shift_dy, image_set.brightfield_shift_dx)
 
     # Checked here, before anything runs per cell: this is the cheapest
     # moment to find out, and every later stage scales with the cell count
