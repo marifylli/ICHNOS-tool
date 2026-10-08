@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from ichnos.calibration import load_session_calibration
-from ichnos.population import CalibrationBinding, summarize_cells
+from ichnos.population import CalibrationBinding, summarize_cells, SUMMARY_METHOD
 
 
 def run(args):
@@ -45,7 +45,8 @@ def run(args):
         "input_cell_csv_sha256": hashlib.sha256(args.cells.read_bytes()).hexdigest(),
         "data_kind": args.data_kind,
         "group_by": ["session_id", "sample_id", "condition_id", "timepoint"],
-        "method": "median of QC-passing finite per-cell red/green ratios",
+        "method": "paired medians of cell red/green ratios and corrected mean green",
+        "summary_method": SUMMARY_METHOD,
         "quartiles": "descriptive cell distribution; not confidence intervals",
         "cells_are_independent_biological_replicates": False,
         "min_cells": args.min_cells,

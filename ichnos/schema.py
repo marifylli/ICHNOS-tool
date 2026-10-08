@@ -63,7 +63,7 @@ class CellRecord:
     raw_mean_green: float
     raw_mean_red: float
 
-    # corrected per-channel intensities (background + flat-field + crosstalk + photobleaching)
+    # corrected per-channel intensities (background + optional flat-field + crosstalk; no photobleaching)
     corrected_mean_green: float
     corrected_mean_red: float
     integrated_green: float
@@ -93,6 +93,19 @@ class CellRecord:
     measurement_time_hours: float | None = None
     sample_id: str | None = None
     condition_id: str | None = None
+    specimen_id: str | None = None
+    biological_replicate_id: str | None = None
+    acquisition_json: str | None = None
+    sat_flag_legacy: bool | None = None
+    qc_pass_legacy_saturation: bool | None = None
+    focus_score_green: float | None = None
+    focus_score_red: float | None = None
+    contrast_to_noise_green: float | None = None
+    contrast_to_noise_red: float | None = None
+    focus_agreement: float | None = None
+    focus_status: str = 'not_evaluated'
+    focus_qc_mode: str = 'report'
+    qc_reasons: str = ''
 
 
 CSV_COLUMNS = [f.name for f in fields(CellRecord)]
@@ -105,7 +118,7 @@ def validate(record: CellRecord) -> None:
     if record.raw_mean_green < 0 or record.raw_mean_red < 0:
         raise ValueError(f"cell {record.cell_id}: negative raw intensity")
 
-    for name in ("sample_id", "condition_id"):
+    for name in ("sample_id", "condition_id", "specimen_id", "biological_replicate_id"):
         validate_optional_identifier(getattr(record, name), field_name=name)
 
     for name in ("sampling_time_hours", "measurement_time_hours"):

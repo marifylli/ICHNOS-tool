@@ -15,3 +15,5 @@ artifacts/
 *.csv
 !examples/*.csv
 !tests/fixtures/**/*.csv
+
+outputs/

@@ -9,7 +9,7 @@ Things this repository does **not** do, and claims it must not make.
   dose and time. Multiple observations require known relative spacing.
 - A separate two-observable snapshot decoder now uses ratio and two-reference
   normalized green for grid compatibility. It requires explicit observation
-  and reference artifacts; the older sample adapter remains ratio-only.
+  and reference artifacts; the older sample adapter remains ratio-only; the new integrated workflow uses paired summaries and explicit acquisition/replicate metadata.
   A separate conditional posterior uses fitted biological-replicate covariance.
   Independent experimental calibration and empirical coverage validation remain open.
 - Relative ratio calibration assumes a zero-intercept multiplicative mapping
