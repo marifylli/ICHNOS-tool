@@ -488,6 +488,16 @@ def process_experiment(image_sets, out_csv, *, input_paths=(), **options):
             return {str(k): describe(v) for k, v in value.items()}
         if isinstance(value, (list, tuple)):
             return [describe(v) for v in value]
+        if isinstance(value, float) and not np.isfinite(value):
+            # A setting the acquisition log left blank, such as an exposure
+            # nobody wrote down. The manifest is written with
+            # allow_nan=False, so leaving it as NaN raises -- and it raises
+            # here, after every image has been processed, which is how the
+            # team lost a completed run twice. null records the gap instead
+            # of destroying the record of the run. This describes inputs and
+            # options only; a NaN in a computed result still raises, as it
+            # should.
+            return None
         if value is None or isinstance(value, (str, bool, int, float)):
             return value
         return dict(type=type(value).__qualname__, configuration_not_serializable=True)

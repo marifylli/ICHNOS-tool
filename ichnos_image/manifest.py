@@ -46,6 +46,27 @@ _FALSE_WORDS = {"false", "0", "no", "n", "blank", "none"}
 _TRUE_WORDS = {"true", "1", "yes", "y"}
 
 
+def _recorded(value) -> float | None:
+    """A setting the manifest did not record, written as null rather than NaN.
+
+    The provenance record is dumped with allow_nan=False, which is right for
+    anything computed: a NaN there means a calculation went wrong and must
+    not be written out as though it were a number. A blank cell in a
+    hand-kept acquisition log is a different thing -- it means nobody wrote
+    the exposure down -- and refusing to record the run at all because of it
+    is the wrong response. It stopped the team's session twice, both times
+    after the images had already been processed.
+
+    null says "not recorded", which is both true and valid JSON. What must
+    not happen is a missing exposure quietly becoming a number, so nothing
+    is substituted for it.
+    """
+    if value is None:
+        return None
+    number = float(value)
+    return None if not np.isfinite(number) else number
+
+
 def _optional_shift(row, name: str) -> float:
     """Read an optional bright-field registration offset; default 0.
 
@@ -186,9 +207,10 @@ def _build_image_sets(
                     extraction_green=green_extraction or ('scalar' if raw_green.ndim == 2 else None),
                     extraction_red=red_extraction or ('scalar' if raw_red.ndim == 2 else None),
                     gain_setting=_optional_identifier(row, 'gain_setting'),
-                    exposure_ms_green=float(row.exposure_ms_green),
-                    exposure_ms_red=float(row.exposure_ms_red),
-                    nd_filter_green=float(row.nd_filter_green), nd_filter_red=float(row.nd_filter_red),
+                    exposure_ms_green=_recorded(row.exposure_ms_green),
+                    exposure_ms_red=_recorded(row.exposure_ms_red),
+                    nd_filter_green=_recorded(row.nd_filter_green),
+                    nd_filter_red=_recorded(row.nd_filter_red),
                 ), sort_keys=True, allow_nan=False),
             )
         )
