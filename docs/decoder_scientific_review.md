@@ -148,35 +148,11 @@ by a biological-replicate noise artifact and posterior inversion. These are
 outstanding work, not capabilities delivered by this documentation/diagnostic
 repair. Do not describe the original snapshot timer design as complete.
 
-### Publish the tested local work from the user's checkout
+### Subsequent implementation
 
-The assistant's environment could fetch public branches but could not push:
-Git reported no available GitHub username/credentials. No remote branch was
-changed by the review. After applying the review patch in the checkout that
-already has the end-to-end/visualization work, commit the explicit source files:
-
-```bash
-git add README.md pyproject.toml docs/limitations.md \
-  docs/end_to_end_verification.md docs/decoder_scientific_review.md \
-  ichnos/calibration_diagnostics.py scripts/audit_ratio_calibration.py \
-  scripts/verify_end_to_end.py scripts/render_e2e_report.py \
-  tests/model/test_calibration_diagnostics.py \
-  tests/model/test_end_to_end_verification.py
-
-git diff --cached --check &&
-git commit -m "Publish verification workflow and correct decoder scope" &&
-git push origin feat/end-to-end-verification
-```
-
-On success, fast-forward main; stop if any command fails:
-
-```bash
-git switch main &&
-git pull --ff-only origin main &&
-git merge --ff-only feat/end-to-end-verification &&
-git push origin main
-```
-
-Do not force-push or reset away local work if branches have diverged. These
-commands integrate the stacked history and documentation; they do not implement
-the outstanding two-observable posterior decoder.
+The separate [two-observable snapshot decoder](two_observable_decoder.md) and
+[conditional posterior](snapshot_posterior.md) now implement the next stages
+identified above. Their synthetic demonstrations do not establish experimental
+calibration, domain-wide identifiability or empirical uncertainty coverage.
+See [dense verification](dense_posterior_verification.md) for grid diagnostics
+and a clearance misspecification scenario.
