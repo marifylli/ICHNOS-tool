@@ -105,6 +105,14 @@ class CellRecord:
     focus_agreement: float | None = None
     focus_status: str = 'not_evaluated'
     focus_qc_mode: str = 'report'
+    #: Which image defined this cell's mask. It belongs on every row because
+    #: the choice is not neutral: measured on the team's 2026-10-05 frames,
+    #: the median red/green ratio moved from 0.9 (masks from green) to 3.9
+    #: (masks from red) on the very same field. Selecting cells by their
+    #: brightness in one channel makes that channel look strong, so rows
+    #: produced with different mask sources are not comparable and the
+    #: contrast_to_noise of the source channel is optimistic.
+    mask_source: str = 'unknown'
     qc_reasons: str = ''
 
 

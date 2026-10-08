@@ -32,6 +32,7 @@ def build_records(
     burner_hours: float,
     lamp_warmup_minutes: float,
     acquisition_order: int,
+    mask_source: str = 'unknown',
     focus_score_threshold: float = FOCUS_SCORE_THRESHOLD,
     registration_shift_threshold_px: float = REGISTRATION_SHIFT_THRESHOLD_PX,
     lamp_warmup_threshold_minutes: float = LAMP_WARMUP_THRESHOLD_MINUTES,
@@ -108,6 +109,7 @@ def build_records(
             contrast_to_noise_green=f.contrast_to_noise_green,
             contrast_to_noise_red=f.contrast_to_noise_red, focus_agreement=f.focus_agreement,
             focus_status=f.focus_status, focus_qc_mode=f.focus_qc_mode,
+            mask_source=mask_source,
             qc_reasons=';'.join(reasons),
             sat_flag_legacy=f.sat_flag_legacy,
             qc_pass_legacy_saturation=(

@@ -25,6 +25,41 @@ from .schema import CellRecord
 from ichnos.schema import validate_elapsed_hours, validate_optional_identifier
 
 
+class SegmentationQCError(RuntimeError):
+    """Segmentation claimed an implausible share of the frame (Stage 2 QC).
+
+    Raised rather than flagged per cell, because there are no cells to flag:
+    when the threshold lands inside the background every "cell" downstream is
+    noise, and when it lands above the signal the few that survive are a
+    brightness-biased sample of the field. Either way the per-cell rows are
+    not a worse measurement of the right thing, they are a measurement of
+    something else, and QC that let them through would be read as a pass.
+
+    process_image_set raises it; _process_experiment catches it per frame,
+    records the refusal and carries on. That split is deliberate: the one
+    frame is unusable, the other frames are not, and an aborted batch
+    discards good work that has already been paid for -- on the team's
+    2026-10-05 session an abort on the last frame threw away 24 processed
+    frames and half an hour.
+    """
+
+
+class MissingBrightfieldError(SegmentationQCError, ValueError):
+    """Bright-field masks were asked for on a frame that has no bright-field.
+
+    Both parents on purpose. Called directly it is a ValueError, because a
+    caller that asks for a mask source it did not supply has made a
+    programming mistake. Inside a batch it is a SegmentationQCError, because
+    there it is a property of the data: in the team's 2026-10-05 session the
+    bright-field frame covers one field per folder, so the folders imaged at
+    two fields have a second field with no bright-field of its own. Those
+    frames must be refused and recorded, not quietly segmented off a
+    fluorescence channel -- a silent fallback would put a different mask
+    source on some rows of one run, which is exactly the confusion that
+    mask_source exists to prevent.
+    """
+
+
 class CrosstalkCalibrationWarning(UserWarning):
     """Raised when one scalar crosstalk coefficient is applied across several
     imaging sessions. A subclass of UserWarning, so existing UserWarning
@@ -52,6 +87,16 @@ class ImageSet:
     burner_hours: float
     lamp_warmup_minutes: float
     bright_field: np.ndarray | None = None  # None -> segment off the green channel instead
+    #: Displacement, in pixels, from the bright-field frame to the
+    #: fluorescence frames of the same field. Changing the filter cube moves
+    #: the image by a few pixels even with the stage untouched, and nudging
+    #: the stage between the two exposures moves it by more: measured on the
+    #: team's 2026-10-05 session, 3-9 px on most fields and up to 157 px on
+    #: a few. Unapplied, a shift of that size puts every mask on background.
+    #: Estimate it with scripts/align_brightfield.py, which also says whether
+    #: the bright-field frame shows the same field at all.
+    brightfield_shift_dy: float = 0.0
+    brightfield_shift_dx: float = 0.0
     saturation_value: float = 65535.0
     raw_saturation_mask: np.ndarray | None = None
     green_saturation_mask: np.ndarray | None = None
@@ -63,6 +108,12 @@ class ImageSet:
     condition_id: str | None = None
     specimen_id: str | None = None
     biological_replicate_id: str | None = None
+    #: False for a frame that should contain no cells at all -- a
+    #: medium-only control, a blank. The segmentation QC then inverts: an
+    #: empty result is the expected one, and finding cells is the failure,
+    #: because it means either contamination or a threshold low enough to
+    #: be reading noise as cells on every other frame in the session.
+    expect_cells: bool = True
     acquisition_json: str | None = None
     source_paths: tuple[str, ...] = ()
 
@@ -80,6 +131,62 @@ class ImageSet:
             )
 
 
+SEGMENTATION_SOURCES = ("sum", "green", "red", "brightfield")
+
+
+def _segmentation_source(image_set, choice: str):
+    """Pick the image the cell masks are cut from, and name it for the record.
+
+    "sum" is the default because the headline measurement is a ratio of the
+    two channels, and choosing cells by their brightness in either one tilts
+    that ratio: on the team's 2026-10-05 frames the median red/green went
+    from 0.9 with masks from green to 3.9 with masks from red, on the same
+    field. Adding the channels treats them alike, so the selection no longer
+    pushes the ratio one way.
+
+    It is not a neutral choice, only a symmetric one -- a cell visible in
+    neither channel is still missed. "brightfield" is the genuinely
+    independent option and is preferable when a bright-field frame of the
+    same field of view exists, which in that session it did not.
+    """
+    if choice not in SEGMENTATION_SOURCES:
+        raise ValueError(f"segmentation_source must be one of {SEGMENTATION_SOURCES}, got {choice!r}")
+    if choice == "brightfield":
+        if image_set.bright_field is None:
+            raise MissingBrightfieldError(
+                "segmentation_source='brightfield' needs ImageSet.bright_field, which is None. "
+                "Supply the bright-field frame of the same field of view, or choose 'sum'."
+            )
+        return image_set.bright_field, "brightfield"
+    if choice == "green":
+        return image_set.green, "green"
+    if choice == "red":
+        return image_set.red, "red"
+    return image_set.green + image_set.red, "green+red"
+
+
+def _shift_labels(labels: np.ndarray, dy: float, dx: float) -> np.ndarray:
+    """Translate a label mask onto the fluorescence frame.
+
+    Translated, not rolled: a rolled mask brings the cells that leave one
+    edge back in at the opposite one, where they would be measured against
+    whatever fluorescence happens to be there. Cells that move off the frame
+    are gone, which is the honest outcome -- on a 157 px shift that is a few
+    percent of the field.
+    """
+    dy, dx = int(round(dy)), int(round(dx))
+    if dy == 0 and dx == 0:
+        return labels
+    out = np.zeros_like(labels)
+    rows, cols = labels.shape
+    if abs(dy) >= rows or abs(dx) >= cols:
+        return out
+    out[max(dy, 0):rows + min(dy, 0), max(dx, 0):cols + min(dx, 0)] = labels[
+        max(-dy, 0):rows - max(dy, 0), max(-dx, 0):cols - max(dx, 0)
+    ]
+    return out
+
+
 def process_image_set(
     image_set: ImageSet,
     *,
@@ -91,6 +198,11 @@ def process_image_set(
     background_method: str = "mode",
     rolling_ball_radius: float | None = None,
     focus_policy: FocusPolicy | None = None,
+    segmentation_source: str = "sum",
+    min_foreground_fraction: float = 0.001,
+    max_foreground_fraction: float = 0.2,
+    blank_max_foreground_fraction: float = 0.01,
+    control_reviews: list | None = None,
 ) -> list[CellRecord]:
     """Run Stages 2-5+8 on one image set, given a pre-calibrated crosstalk
     coefficient (from correct.calibrate_crosstalk_from_control(), once per
@@ -121,8 +233,44 @@ def process_image_set(
         raise ValueError("green/red must be finite matching 2D planes")
     if not np.isfinite(image_set.saturation_value) or image_set.saturation_value <= 0:
         raise ValueError("saturation_value must be finite and positive")
-    segmentation_source = image_set.bright_field if image_set.bright_field is not None else image_set.green
-    labels = segment.segment_cells(segmentation_source, method=segmentation_method, **(segmentation_kwargs or {}))
+    source_image, mask_source = _segmentation_source(image_set, segmentation_source)
+    labels = segment.segment_cells(source_image, method=segmentation_method, **(segmentation_kwargs or {}))
+    if mask_source == "brightfield":
+        labels = _shift_labels(labels, image_set.brightfield_shift_dy, image_set.brightfield_shift_dx)
+
+    # Checked here, before anything runs per cell: this is the cheapest
+    # moment to find out, and every later stage scales with the cell count
+    # that a failure inflates. The bounds are deliberately wide -- a real
+    # yeast field sits at a few percent -- so that passing says only "not
+    # obviously broken", never "segmented well".
+    fraction = segment.foreground_fraction(labels)
+    where = (f"session {image_set.session_id!r}, sample {image_set.sample_id!r}, "
+             f"method {segmentation_method!r}")
+    if not image_set.expect_cells:
+        if control_reviews is not None:
+            control_reviews.append(dict(
+                session_id=image_set.session_id, sample_id=image_set.sample_id,
+                acquisition_order=image_set.acquisition_order,
+                declared_cell_free=True,
+                n_detected_objects=int(np.count_nonzero(np.unique(labels))),
+                foreground_fraction=fraction,
+                segmentation_method=segmentation_method, mask_source=mask_source,
+                control_status=("foreground_above_threshold" if
+                    fraction > blank_max_foreground_fraction else "within_foreground_threshold"),
+                interpretation="unresolved fluorescent objects; not confirmed cells",
+                use_for_biological_summary=False, experimentally_validated=False,
+            ))
+        return []
+    if not min_foreground_fraction <= fraction <= max_foreground_fraction:
+        raise SegmentationQCError(
+            f"segmentation claimed {fraction:.1%} of the frame as cells "
+            f"({labels.max()} objects), outside the plausible "
+            f"{min_foreground_fraction:.1%}-{max_foreground_fraction:.1%}; {where}. "
+            "Too high means the threshold fell inside the background and the objects "
+            "are noise; too low means it fell above the signal and only the brightest "
+            "cells survived. For fluorescence frames try segmentation_method='sparse'; "
+            "for a frame that genuinely holds no cells set ImageSet.expect_cells=False."
+        )
 
     green, red = image_set.green, image_set.red
     if flat_field_green is not None:
@@ -190,7 +338,7 @@ def process_image_set(
     )
 
     edge_ids = segment.border_touching_labels(labels)
-    focus = segment.focus_score(segmentation_source)
+    focus = segment.focus_score(source_image)
 
     return export.build_records(
         features,
@@ -207,6 +355,7 @@ def process_image_set(
         burner_hours=image_set.burner_hours,
         lamp_warmup_minutes=image_set.lamp_warmup_minutes,
         acquisition_order=image_set.acquisition_order,
+        mask_source=mask_source,
         sampling_time_hours=image_set.sampling_time_hours,
         measurement_time_hours=image_set.measurement_time_hours,
         sample_id=image_set.sample_id,
@@ -228,6 +377,12 @@ def _process_experiment(
     background_method: str = "mode",
     rolling_ball_radius: float | None = None,
     focus_policy: FocusPolicy | None = None,
+    segmentation_source: str = "sum",
+    min_foreground_fraction: float = 0.001,
+    max_foreground_fraction: float = 0.2,
+    blank_max_foreground_fraction: float = 0.01,
+    control_reviews: list | None = None,
+    refusals: list | None = None,
 ) -> Path:
     """Process every image set and write one combined CSV (Stage 8, final
     dataset -- every cell, every timepoint, every session in one file).
@@ -268,6 +423,7 @@ def _process_experiment(
             stacklevel=2,
         )
 
+    refused = refusals if refusals is not None else []
     for image_set in image_sets:
         bleed = (
             bleed_green_to_red[image_set.session_id]
@@ -283,19 +439,38 @@ def _process_experiment(
             flat_field_red.get(image_set.session_id) if isinstance(flat_field_red, dict) else flat_field_red
         )
 
-        records = process_image_set(
-            image_set,
-            bleed_green_to_red=bleed,
-            flat_field_green=flat_g,
-            flat_field_red=flat_r,
-            segmentation_method=segmentation_method,
-            segmentation_kwargs=segmentation_kwargs,
-            background_method=background_method,
-            rolling_ball_radius=rolling_ball_radius,
-            focus_policy=focus_policy,
-        )
+        try:
+            records = process_image_set(
+                image_set,
+                bleed_green_to_red=bleed,
+                flat_field_green=flat_g,
+                flat_field_red=flat_r,
+                segmentation_method=segmentation_method,
+                segmentation_kwargs=segmentation_kwargs,
+                segmentation_source=segmentation_source,
+                background_method=background_method,
+                rolling_ball_radius=rolling_ball_radius,
+                focus_policy=focus_policy,
+                min_foreground_fraction=min_foreground_fraction,
+                max_foreground_fraction=max_foreground_fraction,
+                blank_max_foreground_fraction=blank_max_foreground_fraction,
+                control_reviews=control_reviews,
+            )
+        except SegmentationQCError as error:
+            # One unusable frame is not a reason to discard the frames that
+            # already processed. The refusal is carried out to the manifest
+            # instead, so a run that silently has fewer frames than its
+            # manifest cannot be mistaken for a complete one.
+            refused.append(dict(session_id=image_set.session_id, sample_id=image_set.sample_id,
+                                acquisition_order=image_set.acquisition_order, reason=str(error)))
+            continue
         export.export_csv(records, out_csv, append=True)
 
+    if len(refused) == len(image_sets):
+        raise SegmentationQCError(
+            f"every one of the {len(image_sets)} frames was refused, so there is no "
+            f"output to publish. First: {refused[0]['reason']}"
+        )
     return out_csv
 
 
@@ -322,6 +497,16 @@ def process_experiment(image_sets, out_csv, *, input_paths=(), **options):
             return {str(k): describe(v) for k, v in value.items()}
         if isinstance(value, (list, tuple)):
             return [describe(v) for v in value]
+        if isinstance(value, float) and not np.isfinite(value):
+            # A setting the acquisition log left blank, such as an exposure
+            # nobody wrote down. The manifest is written with
+            # allow_nan=False, so leaving it as NaN raises -- and it raises
+            # here, after every image has been processed, which is how the
+            # team lost a completed run twice. null records the gap instead
+            # of destroying the record of the run. This describes inputs and
+            # options only; a NaN in a computed result still raises, as it
+            # should.
+            return None
         if value is None or isinstance(value, (str, bool, int, float)):
             return value
         return dict(type=type(value).__qualname__, configuration_not_serializable=True)
@@ -337,9 +522,15 @@ def process_experiment(image_sets, out_csv, *, input_paths=(), **options):
                 lamp_warmup_minutes=LAMP_WARMUP_THRESHOLD_MINUTES),
             inputs=fingerprints, images=[{f.name: describe(getattr(item, f.name))
                                          for f in fields(item)} for item in image_sets],
-            options=describe(effective), saturation_registration="linear-support, red-to-green frame",
+            options=describe({k: v for k, v in effective.items() if k not in {"refusals", "control_reviews"}}),
+            saturation_registration="linear-support, red-to-green frame",
             photobleaching_corrected=False)
-        _process_experiment(image_sets, csv, **options)
+        refusals = []
+        control_reviews = []
+        _process_experiment(image_sets, csv, refusals=refusals,
+                            control_reviews=control_reviews, **options)
+        metadata["cell_free_control_reviews"] = control_reviews
+        metadata["refused_image_sets"] = refusals
         if file_fingerprints(sources) != fingerprints:
             raise ValueError("input files changed during processing")
         return metadata

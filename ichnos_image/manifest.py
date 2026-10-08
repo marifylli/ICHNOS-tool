@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from skimage.color import rgb2gray
 
+import numpy as np
 import pandas as pd
 from ichnos_image.instrument import SATURATION_VALUE
 from ichnos.schema import validate_elapsed_hours, validate_optional_identifier
@@ -41,6 +42,80 @@ def _optional_identifier(row, name):
         return None
     return validate_optional_identifier(str(value), field_name=name)
 
+_FALSE_WORDS = {"false", "0", "no", "n", "blank", "none"}
+_TRUE_WORDS = {"true", "1", "yes", "y"}
+
+
+def _recorded(value) -> float | None:
+    """A setting the manifest did not record, written as null rather than NaN.
+
+    The provenance record is dumped with allow_nan=False, which is right for
+    anything computed: a NaN there means a calculation went wrong and must
+    not be written out as though it were a number. A blank cell in a
+    hand-kept acquisition log is a different thing -- it means nobody wrote
+    the exposure down -- and refusing to record the run at all because of it
+    is the wrong response. It stopped the team's session twice, both times
+    after the images had already been processed.
+
+    null says "not recorded", which is both true and valid JSON. What must
+    not happen is a missing exposure quietly becoming a number, so nothing
+    is substituted for it.
+    """
+    if value is None:
+        return None
+    number = float(value)
+    return None if not np.isfinite(number) else number
+
+
+def _optional_shift(row, name: str) -> float:
+    """Read an optional bright-field registration offset; default 0.
+
+    A missing or blank cell means "not measured", which is treated as no
+    shift. That is the right default only because an unmeasured shift is
+    usually small; where it is not, the masks land on background and the
+    run says so through the foreground and per-cell QC rather than quietly
+    reporting the background as cells.
+    """
+    value = getattr(row, name, None)
+    if value is None or (not isinstance(value, str) and pd.isna(value)):
+        return 0.0
+    text = str(value).strip()
+    if text == "":
+        return 0.0
+    try:
+        shift = float(text)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a number of pixels, got {value!r}") from exc
+    if not np.isfinite(shift):
+        raise ValueError(f"{name} must be finite, got {value!r}")
+    return shift
+
+
+def _optional_expect_cells(row) -> bool:
+    """Read the optional expect_cells column; default True.
+
+    Spelled out in words rather than left to pandas' truthiness because a
+    manifest is hand-edited: "no" and "false" and an empty cell all turn up,
+    and the quiet failure -- a blank control read as expecting cells --
+    looks exactly like a segmentation failure in the QC output.
+    """
+    value = getattr(row, "expect_cells", None)
+    if value is None or (not isinstance(value, str) and pd.isna(value)):
+        return True
+    if isinstance(value, (bool, np.bool_)):
+        return bool(value)
+    text = str(value).strip().lower()
+    if text == "":
+        return True
+    if text in _FALSE_WORDS:
+        return False
+    if text in _TRUE_WORDS:
+        return True
+    raise ValueError(
+        f"expect_cells must be one of {sorted(_TRUE_WORDS | _FALSE_WORDS)} or empty, got {value!r}"
+    )
+
+
 def _build_image_sets(
     manifest_path: Path,
     *,
@@ -56,6 +131,7 @@ def _build_image_sets(
     image_sets = []
 
     for row in manifest.itertuples():
+        expect_cells = _optional_expect_cells(row)
         sample_id = _optional_identifier(row, "sample_id")
         condition_id = _optional_identifier(row, "condition_id")
         sampling_time_hours = _optional_elapsed_hours(
@@ -107,6 +183,8 @@ def _build_image_sets(
                 green_saturation_mask=green_saturation,
                 red_saturation_mask=red_saturation,
                 bright_field=bright_field,
+                brightfield_shift_dy=_optional_shift(row, "brightfield_shift_dy"),
+                brightfield_shift_dx=_optional_shift(row, "brightfield_shift_dx"),
                 session_id=str(row.session_id),
                 timepoint=int(row.timepoint),
                 acquisition_order=int(row.acquisition_order),
@@ -121,6 +199,7 @@ def _build_image_sets(
                 measurement_time_hours=measurement_time_hours,
                 sample_id=sample_id,
                 condition_id=condition_id,
+                expect_cells=expect_cells,
                 specimen_id=_optional_identifier(row, 'specimen_id'),
                 biological_replicate_id=_optional_identifier(row, 'biological_replicate_id'),
                 acquisition_json=json.dumps(dict(
@@ -128,9 +207,10 @@ def _build_image_sets(
                     extraction_green=green_extraction or ('scalar' if raw_green.ndim == 2 else None),
                     extraction_red=red_extraction or ('scalar' if raw_red.ndim == 2 else None),
                     gain_setting=_optional_identifier(row, 'gain_setting'),
-                    exposure_ms_green=float(row.exposure_ms_green),
-                    exposure_ms_red=float(row.exposure_ms_red),
-                    nd_filter_green=float(row.nd_filter_green), nd_filter_red=float(row.nd_filter_red),
+                    exposure_ms_green=_recorded(row.exposure_ms_green),
+                    exposure_ms_red=_recorded(row.exposure_ms_red),
+                    nd_filter_green=_recorded(row.nd_filter_green),
+                    nd_filter_red=_recorded(row.nd_filter_red),
                 ), sort_keys=True, allow_nan=False),
             )
         )

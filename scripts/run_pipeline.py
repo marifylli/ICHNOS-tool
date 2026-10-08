@@ -17,6 +17,9 @@ Optional timing columns:
 sampling_time_hours, measurement_time_hours
 Optional sample identity columns:
 sample_id, condition_id (sample_id is required by the separate summary CLI)
+expect_cells: "false" for a frame that should hold no cells at all, such as
+a medium-only control. Segmentation QC then inverts for that frame: empty is
+the expected result, and finding cells is the failure. Defaults to true.
 
 Both are actual elapsed hours from stress onset. Missing values remain
 unknown. timepoint is a point identifier, not an elapsed time in hours.
@@ -70,7 +73,11 @@ def main():
         help="fallback bleed_green_to_red for sessions not in --controls (illustrative use only)",
     )
     parser.add_argument("--out", required=True, type=Path, help="output combined CSV path")
-    parser.add_argument("--segmentation-method", default="otsu", choices=["otsu", "cellpose"])
+    parser.add_argument("--segmentation-method", default="otsu",
+                        choices=["otsu", "sparse", "transmitted", "cellpose"],
+                        help="'sparse' for fluorescence frames where cells are a few percent of "
+                             "the pixels; 'transmitted' for bright-field, where cells are dark "
+                             "rims with bright halos rather than bright objects")
     parser.add_argument(
         "--cellpose-gpu", action="store_true",
         help="use GPU for cellpose (--segmentation-method cellpose only)",
@@ -116,6 +123,20 @@ def main():
     parser.add_argument('--focus-min-score', type=float)
     parser.add_argument('--focus-min-cnr', type=float, default=1.0)
     parser.add_argument('--focus-min-agreement', type=float, default=0.6)
+    parser.add_argument("--segmentation-source", default="sum",
+                        choices=["sum", "green", "red", "brightfield"],
+                        help="which image the cell masks are cut from; 'sum' keeps the red/green "
+                             "ratio from being tilted by the channel that chose the cells. "
+                             "'brightfield' is the only genuinely independent choice: it needs a "
+                             "bright_field_path per row, is normally paired with "
+                             "--segmentation-method transmitted, and uses the optional "
+                             "brightfield_shift_dy/dx columns to put the masks on the "
+                             "fluorescence frames (scripts/align_brightfield.py measures both "
+                             "those offsets and whether the frame shows the same field at all)")
+    parser.add_argument('--min-foreground-fraction', type=float, default=0.001,
+                        help="refuse a frame whose segmentation claims less of it than this")
+    parser.add_argument('--max-foreground-fraction', type=float, default=0.2,
+                        help="refuse a frame whose segmentation claims more of it than this")
     args = parser.parse_args()
     from ichnos_image.focus import FocusPolicy
     focus_policy = FocusPolicy(args.focus_mode, args.focus_min_score,
@@ -151,11 +172,27 @@ def main():
         image_sets, args.out, bleed_green_to_red=bleed_by_session, focus_policy=focus_policy,
         input_paths=[args.manifest] + ([args.controls] + [args.controls.parent / p for p in pd.read_csv(args.controls)[["control_green_path", "control_red_path"]].to_numpy().ravel()] if args.controls else []),
         segmentation_method=args.segmentation_method, segmentation_kwargs=segmentation_kwargs or None,
+        segmentation_source=args.segmentation_source,
         background_method=args.background_method, rolling_ball_radius=args.rolling_ball_radius,
+        min_foreground_fraction=args.min_foreground_fraction,
+        max_foreground_fraction=args.max_foreground_fraction,
     )
 
+    # Absent when process_experiment is stubbed out (tests), so treat a
+    # missing manifest as "nothing refused" rather than failing the run
+    # after it has already produced its CSV.
+    run_manifest = Path(str(out_path) + ".manifest.json")
+    refused = (
+        json.loads(run_manifest.read_text()).get("refused_image_sets", [])
+        if run_manifest.exists() else []
+    )
+    if refused:
+        print(f"\n{len(refused)} image set(s) refused by segmentation QC and left out of the CSV:")
+        for item in refused:
+            print(f"  - {item['sample_id']}: {item['reason']}")
+
     df = pd.read_csv(out_path)
-    print(f"\n{len(image_sets)} image set(s) -> {len(df)} cell records -> {out_path}")
+    print(f"\n{len(image_sets) - len(refused)}/{len(image_sets)} image set(s) -> {len(df)} cell records -> {out_path}")
     print(df.groupby("session_id").agg(n_cells=("cell_id", "count"), qc_pass_frac=("qc_pass", "mean")))
 
 

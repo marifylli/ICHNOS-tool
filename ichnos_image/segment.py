@@ -33,10 +33,30 @@ def _remove_objects_below_size(
         binary, min_size=min_size
     )
 
+def foreground_fraction(mask: np.ndarray) -> float:
+    """Share of the frame a segmentation claims as cells (Stage 2 QC).
+
+    Accepts a boolean mask or an integer label mask. The point of measuring
+    it is that the two ways segmentation fails on a real fluorescence frame
+    look nothing alike in the output but are both obvious here: a threshold
+    that lands inside the background claims tens of percent of the frame and
+    the watershed then shatters it into thousands of cell-sized fragments,
+    while a threshold above the signal claims almost nothing and silently
+    returns a handful of the brightest cells. Object count alone separates
+    neither case from a real field -- the fragments are cell-sized, and a
+    sparse field genuinely has few cells.
+    """
+    return float((np.asarray(mask) > 0).mean())
+
+
 def segment_cells(
     bf_image: np.ndarray, method: str = "otsu", min_size: int = 30, resize_factor: float = 1.0, **cellpose_kwargs
 ) -> np.ndarray:
     """Return an integer label mask (0 = background) for a bright-field/DIC image.
+
+    method="sparse" is for fluorescence frames, where cells occupy a few
+    percent of the pixels and the histogram has one mode (background), not
+    two. Both other methods assume otherwise; see _segment_sparse.
 
     method="cellpose" needs the optional cellpose+torch dependencies (deep
     learning segmentation, preferred for stress-distorted morphology per the
@@ -45,6 +65,10 @@ def segment_cells(
     unlike "otsu", cellpose tolerates this well). See
     scripts/estimate_cellpose_throughput.py to turn that per-image number
     into a "how long will my real batch take" estimate.
+
+    method="transmitted" is for bright-field frames, where cells are dark
+    rims with bright halos rather than bright objects; see
+    _segment_transmitted. "sparse" on such a frame returns the halos.
 
     method="otsu" (default) is a classical Otsu + watershed fallback with no
     heavy dependencies, good enough for tests/prototyping.
@@ -73,7 +97,83 @@ def segment_cells(
         return _segment_cellpose(bf_image, **cellpose_kwargs)
     if method == "otsu":
         return _segment_otsu(bf_image, min_size=min_size)
+    if method == "sparse":
+        return _segment_sparse(bf_image, min_size=min_size, **cellpose_kwargs)
+    if method == "transmitted":
+        return _segment_transmitted(bf_image, min_size=min_size, **cellpose_kwargs)
     raise ValueError(f"unknown segmentation method: {method!r}")
+
+
+def _segment_transmitted(
+    image: np.ndarray,
+    *,
+    min_size: int = 200,
+    texture_window_px: int = 9,
+    noise_sigmas: float = 2.5,
+    closing_px: int = 2,
+    erosion_px: int = 8,
+) -> np.ndarray:
+    """Segment a bright-field frame, where cells are neither bright nor dark.
+
+    A yeast cell in transmitted light is a dark rim with a bright halo on a
+    bright, unevenly lit background. Its interior is often the same grey as
+    the background, so thresholding intensity in either direction finds rims
+    and halos rather than cells, and "sparse" -- which looks for bright
+    blobs -- returns the halos. What separates cell from background here is
+    not brightness but structure: the background is smooth and the cells are
+    not, at the scale of a few pixels. This thresholds local standard
+    deviation, which measures exactly that and is indifferent to the slow
+    illumination gradient across the frame.
+
+    The masks come out wider than the cells, because the halo is textured
+    too. On synthetic cells of known size the raw mask was three times their
+    area; erosion brings it back to roughly cell-sized, which matters when
+    the mask is used to register against another image -- it sharpened the
+    recovered displacement from (+20, -20) to the true (+17, -23). Erosion
+    is backed off rather than applied blindly, since a cell smaller than the
+    radius asked for would simply disappear.
+    """
+    if texture_window_px < 2 or noise_sigmas <= 0 or closing_px < 0 or erosion_px < 0:
+        raise ValueError(
+            "texture_window_px must be >= 2, noise_sigmas > 0, "
+            "closing_px and erosion_px >= 0"
+        )
+    data = np.asarray(image, dtype=float)
+    if not np.isfinite(data).all():
+        raise ValueError("image must be finite")
+
+    texture = _local_std(ndi.median_filter(data, 3), texture_window_px)
+    middle = float(np.median(texture))
+    noise = 1.4826 * float(np.median(np.abs(texture - middle)))
+    if noise == 0:
+        return np.zeros(data.shape, dtype=np.int32)
+
+    binary = texture > middle + noise_sigmas * noise
+    if closing_px:
+        binary = ndi.binary_closing(binary, morphology.disk(closing_px))
+    binary = ndi.binary_fill_holes(binary)
+    binary = _remove_objects_below_size(binary, min_size)
+    binary = _erode_keeping_objects(binary, erosion_px)
+    return _split_touching(binary)
+
+
+def _local_std(image: np.ndarray, window: int) -> np.ndarray:
+    mean = ndi.uniform_filter(image, window)
+    return np.sqrt(np.maximum(ndi.uniform_filter(image * image, window) - mean * mean, 0.0))
+
+
+def _erode_keeping_objects(binary: np.ndarray, radius: int, keep: float = 0.5) -> np.ndarray:
+    """Erode as far as possible while at least `keep` of the objects survive."""
+    if radius <= 0:
+        return binary
+    before = ndi.label(binary)[1]
+    if before == 0:
+        return binary
+    for current in range(radius, 0, -1):
+        candidate = ndi.binary_erosion(binary, morphology.disk(current))
+        if ndi.label(candidate)[1] >= keep * before:
+            return candidate
+    return binary
 
 
 def _segment_resized(bf_image: np.ndarray, *, method: str, min_size: int, resize_factor: float, **cellpose_kwargs) -> np.ndarray:
@@ -140,15 +240,98 @@ def _segment_otsu(bf_image: np.ndarray, min_size: int = 30) -> np.ndarray:
     binary = ndi.binary_fill_holes(binary)
     binary = _remove_objects_below_size(binary, min_size)
 
+    return _split_touching(binary)
+
+
+def _segment_sparse(
+    image: np.ndarray,
+    *,
+    min_size: int = 30,
+    noise_sigmas: float = 3.0,
+    background_sigma_px: float = 30.0,
+    smoothing_sigma_px: float = 1.5,
+    boundary_erosion_px: int = 0,
+) -> np.ndarray:
+    """Segment a fluorescence frame where cells are a small minority of pixels.
+
+    Why not "otsu" here: that method thresholds edge activity with Otsu's
+    rule, which splits a histogram into two classes of comparable weight.
+    On the team's 2026-10-05 frames the cells are 1-4% of the pixels, so
+    there is no second class to find and the split falls wherever the
+    background happens to spread. Measured on those frames, the resulting
+    foreground ran from 0.1% (18 objects where ~90 cells are visible) to
+    87% (shattered into 1301 fragments) across images from one session --
+    the swing tracked how dim the frame was, not how well it was segmented.
+
+    This method makes the sparse assumption explicit instead. It removes the
+    background with a high-pass (anything varying more slowly than
+    background_sigma_px is illumination, not a cell), estimates the noise of
+    what is left from its MAD, and keeps what rises noise_sigmas above it.
+    The threshold is therefore set by each frame's own noise rather than by
+    its histogram shape, which is what makes it hold as frames get dimmer.
+
+    noise_sigmas is a choice, not a calibration: 3.0 is the usual
+    detection-threshold convention, but the value that suits a given
+    microscope should be set against fields whose cells have been counted by
+    eye. Raise it to drop faint cells, lower it to admit more noise.
+
+    Masks come out larger than the cells, because the smoothing that makes
+    the threshold robust also spreads each cell outward: against synthetic
+    discs the masks recover every cell but run about 1.5x their area, so a
+    per-cell mean is pulled toward the local background. That dilution is
+    similar across a session and so largely cancels in a ratio or in a
+    comparison against a time-matched control, but it is not negligible in
+    an absolute intensity. boundary_erosion_px shrinks the masks back:
+    measured on the same discs, 2 px took precision from 0.65 to 0.98 while
+    keeping recall at 0.98. It is 0 by default because the same 2 px cost a
+    third of the objects on the team's real dim frames (77 -> 41) -- real
+    cells are not discs, and the faint ones erode away entirely. Tighten it
+    only against fields counted by eye.
+    """
+    if image.ndim != 2:
+        raise ValueError("image must be 2D")
+    if noise_sigmas <= 0 or background_sigma_px <= 0:
+        raise ValueError("noise_sigmas and background_sigma_px must be positive")
+    if boundary_erosion_px < 0:
+        raise ValueError("boundary_erosion_px must not be negative")
+
+    # The median filter takes out single-pixel spikes, which would otherwise
+    # inflate the MAD and so raise the threshold for the whole frame.
+    smoothed = filters.gaussian(ndi.median_filter(image.astype(float), size=3), sigma=smoothing_sigma_px)
+    high_pass = smoothed - filters.gaussian(smoothed, sigma=background_sigma_px)
+
+    # MAD, not the standard deviation: the cells are in this image too, and
+    # a standard deviation would count them as noise and threshold them away.
+    noise = 1.4826 * float(np.median(np.abs(high_pass - np.median(high_pass))))
+    if noise <= 0:
+        return np.zeros(image.shape, dtype=np.int32)
+
+    binary = ndi.binary_fill_holes(high_pass > noise_sigmas * noise)
+    if boundary_erosion_px:
+        binary = morphology.erosion(binary, morphology.disk(boundary_erosion_px))
+    # After erosion, so that min_size is applied to the masks actually
+    # returned rather than to the inflated ones.
+    binary = _remove_objects_below_size(binary, min_size)
+    labels = _split_touching(binary)
+
+    # Watershed can split retained components into smaller labels.
+    ids, areas = np.unique(labels, return_counts=True)
+    small_ids = ids[(ids != 0) & (areas < min_size)]
+    if small_ids.size:
+        labels[np.isin(labels, small_ids)] = 0
+
+    return labels
+
+
+def _split_touching(binary: np.ndarray) -> np.ndarray:
+    """Watershed on the distance transform, so touching cells stay separate."""
     distance = ndi.distance_transform_edt(binary)
     peaks = peak_local_max(distance, min_distance=5, labels=binary.astype(int))
     markers = np.zeros_like(binary, dtype=np.int32)
     for i, (r, c) in enumerate(peaks, start=1):
         markers[r, c] = i
     markers = ndi.label(markers)[0]
-
-    labels = segmentation.watershed(-distance, markers, mask=binary)
-    return labels.astype(np.int32)
+    return segmentation.watershed(-distance, markers, mask=binary).astype(np.int32)
 
 
 def border_touching_labels(label_mask: np.ndarray) -> set[int]:
