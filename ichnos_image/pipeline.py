@@ -105,6 +105,40 @@ class ImageSet:
             )
 
 
+SEGMENTATION_SOURCES = ("sum", "green", "red", "brightfield")
+
+
+def _segmentation_source(image_set, choice: str):
+    """Pick the image the cell masks are cut from, and name it for the record.
+
+    "sum" is the default because the headline measurement is a ratio of the
+    two channels, and choosing cells by their brightness in either one tilts
+    that ratio: on the team's 2026-10-05 frames the median red/green went
+    from 0.9 with masks from green to 3.9 with masks from red, on the same
+    field. Adding the channels treats them alike, so the selection no longer
+    pushes the ratio one way.
+
+    It is not a neutral choice, only a symmetric one -- a cell visible in
+    neither channel is still missed. "brightfield" is the genuinely
+    independent option and is preferable when a bright-field frame of the
+    same field of view exists, which in that session it did not.
+    """
+    if choice not in SEGMENTATION_SOURCES:
+        raise ValueError(f"segmentation_source must be one of {SEGMENTATION_SOURCES}, got {choice!r}")
+    if choice == "brightfield":
+        if image_set.bright_field is None:
+            raise ValueError(
+                "segmentation_source='brightfield' needs ImageSet.bright_field, which is None. "
+                "Supply the bright-field frame of the same field of view, or choose 'sum'."
+            )
+        return image_set.bright_field, "brightfield"
+    if choice == "green":
+        return image_set.green, "green"
+    if choice == "red":
+        return image_set.red, "red"
+    return image_set.green + image_set.red, "green+red"
+
+
 def process_image_set(
     image_set: ImageSet,
     *,
@@ -116,6 +150,7 @@ def process_image_set(
     background_method: str = "mode",
     rolling_ball_radius: float | None = None,
     focus_policy: FocusPolicy | None = None,
+    segmentation_source: str = "sum",
     min_foreground_fraction: float = 0.001,
     max_foreground_fraction: float = 0.2,
     blank_max_foreground_fraction: float = 0.01,
@@ -149,8 +184,8 @@ def process_image_set(
         raise ValueError("green/red must be finite matching 2D planes")
     if not np.isfinite(image_set.saturation_value) or image_set.saturation_value <= 0:
         raise ValueError("saturation_value must be finite and positive")
-    segmentation_source = image_set.bright_field if image_set.bright_field is not None else image_set.green
-    labels = segment.segment_cells(segmentation_source, method=segmentation_method, **(segmentation_kwargs or {}))
+    source_image, mask_source = _segmentation_source(image_set, segmentation_source)
+    labels = segment.segment_cells(source_image, method=segmentation_method, **(segmentation_kwargs or {}))
 
     # Checked here, before anything runs per cell: this is the cheapest
     # moment to find out, and every later stage scales with the cell count
@@ -246,7 +281,7 @@ def process_image_set(
     )
 
     edge_ids = segment.border_touching_labels(labels)
-    focus = segment.focus_score(segmentation_source)
+    focus = segment.focus_score(source_image)
 
     return export.build_records(
         features,
@@ -263,6 +298,7 @@ def process_image_set(
         burner_hours=image_set.burner_hours,
         lamp_warmup_minutes=image_set.lamp_warmup_minutes,
         acquisition_order=image_set.acquisition_order,
+        mask_source=mask_source,
         sampling_time_hours=image_set.sampling_time_hours,
         measurement_time_hours=image_set.measurement_time_hours,
         sample_id=image_set.sample_id,
@@ -284,6 +320,7 @@ def _process_experiment(
     background_method: str = "mode",
     rolling_ball_radius: float | None = None,
     focus_policy: FocusPolicy | None = None,
+    segmentation_source: str = "sum",
     min_foreground_fraction: float = 0.001,
     max_foreground_fraction: float = 0.2,
     blank_max_foreground_fraction: float = 0.01,
@@ -352,6 +389,7 @@ def _process_experiment(
                 flat_field_red=flat_r,
                 segmentation_method=segmentation_method,
                 segmentation_kwargs=segmentation_kwargs,
+                segmentation_source=segmentation_source,
                 background_method=background_method,
                 rolling_ball_radius=rolling_ball_radius,
                 focus_policy=focus_policy,

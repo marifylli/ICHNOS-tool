@@ -69,6 +69,21 @@ from skimage.morphology import disk
 NO_EDGE_SCORE = 1.0
 
 
+#: Reading contrast_to_noise or focus_score for the channel that defined the
+#: masks is circular: cells were selected for standing out in it. Compare
+#: channels only when neither one chose the cells (mask_source "green+red" or
+#: "brightfield"), and read a single channel's value as an upper bound
+#: otherwise. On the team's 2026-10-05 frames the effect is large and almost
+#: symmetric: masks from green gave CNR 1.8/0.6 (green/red) and masks from
+#: red gave 0.65/2.1 on the same field.
+UNBIASED_MASK_SOURCES = ("green+red", "brightfield")
+
+
+def mask_source_biases(channel: str, mask_source: str) -> bool:
+    """True when `channel`'s focus and contrast numbers are self-selected."""
+    return mask_source not in UNBIASED_MASK_SOURCES and mask_source == channel
+
+
 @dataclass(frozen=True)
 class CellFocus:
     """Per-cell focus QC for one channel."""

@@ -12,7 +12,10 @@ Steps
   3. Flat field per channel = smoothed median of all images (each divided by
      its own median after subtracting a dark level). Approximate; reported.
   4. Linearity check: cell-free background vs recorded exposure.
-  5. Segment on mCherry (flat-corrected, high-pass, MAD threshold).
+  5. Segment (flat-corrected, high-pass, MAD threshold) on the image chosen by
+     --segmentation-source: by default the sum of both channels, because
+     cutting masks from one channel lets that channel select its own cells and
+     skews the ratio in step 6. The choice is recorded on every row.
   6. Per cell: annulus background, flat correction, ratio R/G, green/exposure.
   7. Per-cell focus score and contrast-to-noise in each channel
      (ichnos_image.focus); cells below the focus percentile cutoff are
@@ -122,8 +125,36 @@ def flat_field(paths, dark, sigma):
     return flat / flat.mean()
 
 
-def segment_red(red, dark, flat, *, k, min_area, max_area, smooth):
-    image = ndi.gaussian_filter(ndi.median_filter((red - dark) / flat, 3), smooth)
+SEGMENTATION_SOURCES = ("sum", "green", "red")
+
+
+def segmentation_source(green, red, dark, flat_g, flat_r, choice):
+    """The flat-corrected image the masks are cut from, plus its name.
+
+    Cutting masks by brightness in one channel selects the cells that are
+    bright in that channel, which inflates that channel's apparent signal and
+    skews the ratio this analysis exists to report: on this session the median
+    per-cell red/green moved from about 0.9 with green masks to about 3.9 with
+    red masks. 'sum' is symmetric between the channels -- it does not make the
+    masks unbiased in an absolute sense (only a label-free image such as
+    brightfield would), but it stops either channel from choosing its own
+    cells, and it is what the pipeline defaults to, so the two paths can be
+    compared.
+    """
+    if choice not in SEGMENTATION_SOURCES:
+        raise ValueError(f"segmentation source {choice!r} not one of {SEGMENTATION_SOURCES}")
+    corrected_green = (green - dark) / flat_g
+    corrected_red = (red - dark) / flat_r
+    if choice == "green":
+        return corrected_green, "green"
+    if choice == "red":
+        return corrected_red, "red"
+    return corrected_green + corrected_red, "green+red"
+
+
+def segment(source, *, k, min_area, max_area, smooth):
+    """Segment an already dark-subtracted, flat-corrected image."""
+    image = ndi.gaussian_filter(ndi.median_filter(source, 3), smooth)
     high = image - ndi.gaussian_filter(image, 30)
     noise = 1.4826 * np.median(np.abs(high - np.median(high)))
     mask = high > k * noise
@@ -196,8 +227,10 @@ def bootstrap_ci(values, rng, n=2000):
     return tuple(np.percentile(meds, [2.5, 97.5]))
 
 
-def overlay(red, labels, kept_ids, path, dark, flat):
-    disp = (red - dark) / flat
+def overlay(source, labels, kept_ids, path):
+    """Draw the masks on the image they were cut from, not on a fixed channel,
+    so the picture shows what the segmentation actually saw."""
+    disp = source
     lo, hi = np.percentile(disp, [1, 99.8])
     disp = np.clip((disp - lo) / (hi - lo), 0, 1)
     rgb = np.dstack([disp] * 3)
@@ -217,6 +250,11 @@ def main():
     ap.add_argument("--dark-level", type=float, default=None,
                     help="camera offset in grey levels; default = min of per-image 0.1st percentiles")
     ap.add_argument("--flat-sigma", type=float, default=60)
+    ap.add_argument("--segmentation-source", choices=SEGMENTATION_SOURCES, default="sum",
+                    help="which image the masks are cut from; 'sum' (default) is symmetric "
+                         "between the channels. 'green' or 'red' lets that channel choose "
+                         "its own cells, which skews the reported ratio -- use them only to "
+                         "measure how large that effect is")
     ap.add_argument("--k-mad", type=float, default=3.0)
     ap.add_argument("--smooth-sigma", type=float, default=2.5)
     ap.add_argument("--min-area", type=int, default=60)
@@ -247,12 +285,14 @@ def main():
     np.save(args.out_dir / "flat_green.npy", flat_g)
     np.save(args.out_dir / "flat_red.npy", flat_r)
 
-    all_cells, bg_rows = [], []
+    all_cells, bg_rows, mask_source = [], [], None
     for idx, row in images.iterrows():
         green, red = load(row.green_path), load(row.red_path)
-        labels, oversize, mask = segment_red(red, dark, flat_r, k=args.k_mad,
-                                             min_area=args.min_area, max_area=args.max_area,
-                                             smooth=args.smooth_sigma)
+        source, mask_source = segmentation_source(green, red, dark, flat_g, flat_r,
+                                                  args.segmentation_source)
+        labels, oversize, mask = segment(source, k=args.k_mad,
+                                         min_area=args.min_area, max_area=args.max_area,
+                                         smooth=args.smooth_sigma)
         cells = per_cell(labels, oversize, mask, green, red, flat_g, flat_r)
         bg_rows.append(dict(image=idx, green_bg_center=central_background(green, mask),
                             red_bg_center=central_background(red, mask)))
@@ -280,7 +320,7 @@ def main():
             n_focus_cells=getattr(agreement, "n_cells", 0),
         )
         name = f"{row.dose_label}_{row.time_label}_{row.field}.png"
-        overlay(red, labels, kept, args.out_dir / "overlays" / name, dark, flat_r)
+        overlay(source, labels, kept, args.out_dir / "overlays" / name)
         focus_note = ""
         if agreement is not None and not agreement.comparable:
             focus_note = (f"  [?] focus not comparable: contrast-to-noise green "
@@ -293,6 +333,8 @@ def main():
 
     images = images.join(pd.DataFrame(bg_rows).set_index("image"))
     cells = pd.concat(all_cells, ignore_index=True)
+    # On every row, because it moves the ratio the row exists to report.
+    cells["mask_source"] = mask_source
     cells["ratio_rg"] = cells.red_signal / cells.green_signal
     cells["green_per_s"] = cells.green_signal / (cells.exposure_acq_ms / 1000)
 
@@ -365,6 +407,7 @@ def main():
     report = dict(
         scope="exploratory descriptive QC; not calibrated; not decoder input",
         n_images=len(images), dark_level=float(dark), clock_offset_min=offset,
+        mask_source=mask_source,
         notes_time_disagreements=summary.loc[summary.notes_time_disagrees,
             ["dose_label", "time_label", "field", "notes_red_time", "offset_residual_min"]].to_dict("records"),
         images_not_in_notes=summary.loc[~summary.in_notes, ["dose_label", "time_label", "field"]].to_dict("records"),
@@ -390,7 +433,9 @@ def main():
                  "where focus is not comparable, a low green focus score means low contrast, "
                  "not necessarily defocus",
                  "flat field estimated from the data with an approximate dark level",
-                 "mCherry-based segmentation; clusters above max_area excluded"],
+                 f"masks cut from {mask_source}; clusters above max_area excluded",
+                 "a single-channel mask source lets that channel select its own cells and "
+                 "inflates its signal; compare runs only at the same mask source"],
     )
     (args.out_dir / "report.json").write_text(json.dumps(report, indent=2, default=float))
     print(json.dumps({k: report[k] for k in ("dark_level", "clock_offset_min",
