@@ -312,7 +312,15 @@ def _segment_sparse(
     # After erosion, so that min_size is applied to the masks actually
     # returned rather than to the inflated ones.
     binary = _remove_objects_below_size(binary, min_size)
-    return _split_touching(binary)
+    labels = _split_touching(binary)
+
+    # Watershed can split retained components into smaller labels.
+    ids, areas = np.unique(labels, return_counts=True)
+    small_ids = ids[(ids != 0) & (areas < min_size)]
+    if small_ids.size:
+        labels[np.isin(labels, small_ids)] = 0
+
+    return labels
 
 
 def _split_touching(binary: np.ndarray) -> np.ndarray:
