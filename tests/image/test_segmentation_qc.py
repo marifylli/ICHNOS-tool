@@ -104,26 +104,26 @@ def test_the_guard_runs_before_the_per_cell_work():
         extract.extract_per_cell = original
 
 
-def test_a_declared_blank_frame_is_allowed_to_be_empty():
-    """A medium-only control has no cells by design. Judging it by the rule
-    for sample frames reports a segmentation failure where the segmentation
-    was right -- which is what aborted the team's first guarded run."""
-    labels = np.zeros((160, 160), dtype=np.int32)
-    labels[:2, :4] = 1
-    records = run(labels, image_set_overrides=dict(expect_cells=False))
-    assert len(records) == 1  # whatever was found is still reported, not refused
-
-
-def test_cells_in_a_declared_blank_frame_are_refused():
-    """The inverted failure: if a frame that should be empty is full, either
-    it is contaminated or the threshold is reading noise as cells on every
-    frame in the session."""
-    with pytest.raises(SegmentationQCError) as excinfo:
-        run(plausible_labels(), image_set_overrides=dict(expect_cells=False))
-    assert "declared cell-free" in str(excinfo.value)
+@pytest.mark.parametrize("fraction_high", [False, True])
+def test_declared_controls_never_export_biological_records(fraction_high):
+    labels = plausible_labels() if fraction_high else np.zeros((160, 160), dtype=np.int32)
+    if not fraction_high:
+        labels[:2, :4] = 7
+    reviews = []
+    records = run(labels, image_set_overrides=dict(expect_cells=False),
+                  control_reviews=reviews)
+    assert records == []
+    assert len(reviews) == 1
+    review = reviews[0]
+    assert review["n_detected_objects"] == len(set(np.unique(labels)) - {0})
+    assert review["use_for_biological_summary"] is False
+    assert review["experimentally_validated"] is False
+    assert review["control_status"] == (
+        "foreground_above_threshold" if fraction_high else "within_foreground_threshold")
 
 
 def test_blank_ceiling_is_adjustable():
-    labels = plausible_labels()
-    assert run(labels, image_set_overrides=dict(expect_cells=False),
-               blank_max_foreground_fraction=0.9)
+    reviews = []
+    assert run(plausible_labels(), image_set_overrides=dict(expect_cells=False),
+               blank_max_foreground_fraction=0.9, control_reviews=reviews) == []
+    assert reviews[0]["control_status"] == "within_foreground_threshold"

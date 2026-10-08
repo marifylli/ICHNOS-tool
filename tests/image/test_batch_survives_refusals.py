@@ -107,3 +107,22 @@ def test_a_declared_blank_control_does_not_count_as_a_refusal(tmp_path, fake_seg
     fake_segmentation([good_labels(), empty])
     out = run(tmp_path, [image_set(0), image_set(1, cells=False, expect_cells=False)])
     assert manifest_of(out)["refused_image_sets"] == []
+
+
+def test_control_only_run_publishes_report_and_empty_cell_csv(tmp_path, fake_segmentation):
+    fake_segmentation([good_labels()])
+    out = run(tmp_path, [image_set(0, expect_cells=False)])
+    import pandas as pd
+    assert pd.read_csv(out).empty
+    report = manifest_of(out)["cell_free_control_reviews"]
+    assert len(report) == 1
+    assert report[0]["n_detected_objects"] == 4
+    assert report[0]["use_for_biological_summary"] is False
+
+
+def test_mixed_run_keeps_control_separate(tmp_path, fake_segmentation):
+    fake_segmentation([good_labels(), good_labels()])
+    out = run(tmp_path, [image_set(0, expect_cells=False), image_set(1)])
+    import pandas as pd
+    assert set(pd.read_csv(out).sample_id) == {"sample-1"}
+    assert len(manifest_of(out)["cell_free_control_reviews"]) == 1

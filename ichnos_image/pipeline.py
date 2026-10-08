@@ -202,6 +202,7 @@ def process_image_set(
     min_foreground_fraction: float = 0.001,
     max_foreground_fraction: float = 0.2,
     blank_max_foreground_fraction: float = 0.01,
+    control_reviews: list | None = None,
 ) -> list[CellRecord]:
     """Run Stages 2-5+8 on one image set, given a pre-calibrated crosstalk
     coefficient (from correct.calibrate_crosstalk_from_control(), once per
@@ -246,15 +247,21 @@ def process_image_set(
     where = (f"session {image_set.session_id!r}, sample {image_set.sample_id!r}, "
              f"method {segmentation_method!r}")
     if not image_set.expect_cells:
-        if fraction > blank_max_foreground_fraction:
-            raise SegmentationQCError(
-                f"a frame declared cell-free claimed {fraction:.1%} of itself as cells "
-                f"({labels.max()} objects), above {blank_max_foreground_fraction:.1%}; {where}. "
-                "Either the frame is not blank, or the threshold is low enough to be "
-                "reading noise as cells -- in which case every other frame in this "
-                "session is affected too."
-            )
-    elif not min_foreground_fraction <= fraction <= max_foreground_fraction:
+        if control_reviews is not None:
+            control_reviews.append(dict(
+                session_id=image_set.session_id, sample_id=image_set.sample_id,
+                acquisition_order=image_set.acquisition_order,
+                declared_cell_free=True,
+                n_detected_objects=int(np.count_nonzero(np.unique(labels))),
+                foreground_fraction=fraction,
+                segmentation_method=segmentation_method, mask_source=mask_source,
+                control_status=("foreground_above_threshold" if
+                    fraction > blank_max_foreground_fraction else "within_foreground_threshold"),
+                interpretation="unresolved fluorescent objects; not confirmed cells",
+                use_for_biological_summary=False, experimentally_validated=False,
+            ))
+        return []
+    if not min_foreground_fraction <= fraction <= max_foreground_fraction:
         raise SegmentationQCError(
             f"segmentation claimed {fraction:.1%} of the frame as cells "
             f"({labels.max()} objects), outside the plausible "
@@ -374,6 +381,7 @@ def _process_experiment(
     min_foreground_fraction: float = 0.001,
     max_foreground_fraction: float = 0.2,
     blank_max_foreground_fraction: float = 0.01,
+    control_reviews: list | None = None,
     refusals: list | None = None,
 ) -> Path:
     """Process every image set and write one combined CSV (Stage 8, final
@@ -446,6 +454,7 @@ def _process_experiment(
                 min_foreground_fraction=min_foreground_fraction,
                 max_foreground_fraction=max_foreground_fraction,
                 blank_max_foreground_fraction=blank_max_foreground_fraction,
+                control_reviews=control_reviews,
             )
         except SegmentationQCError as error:
             # One unusable frame is not a reason to discard the frames that
@@ -513,11 +522,14 @@ def process_experiment(image_sets, out_csv, *, input_paths=(), **options):
                 lamp_warmup_minutes=LAMP_WARMUP_THRESHOLD_MINUTES),
             inputs=fingerprints, images=[{f.name: describe(getattr(item, f.name))
                                          for f in fields(item)} for item in image_sets],
-            options=describe({k: v for k, v in effective.items() if k != "refusals"}),
+            options=describe({k: v for k, v in effective.items() if k not in {"refusals", "control_reviews"}}),
             saturation_registration="linear-support, red-to-green frame",
             photobleaching_corrected=False)
         refusals = []
-        _process_experiment(image_sets, csv, refusals=refusals, **options)
+        control_reviews = []
+        _process_experiment(image_sets, csv, refusals=refusals,
+                            control_reviews=control_reviews, **options)
+        metadata["cell_free_control_reviews"] = control_reviews
         metadata["refused_image_sets"] = refusals
         if file_fingerprints(sources) != fingerprints:
             raise ValueError("input files changed during processing")
