@@ -70,7 +70,8 @@ def main():
         help="fallback bleed_green_to_red for sessions not in --controls (illustrative use only)",
     )
     parser.add_argument("--out", required=True, type=Path, help="output combined CSV path")
-    parser.add_argument("--segmentation-method", default="otsu", choices=["otsu", "cellpose"])
+    parser.add_argument("--segmentation-method", default="otsu", choices=["otsu", "sparse", "cellpose"],
+                        help="'sparse' for fluorescence frames where cells are a few percent of the pixels")
     parser.add_argument(
         "--cellpose-gpu", action="store_true",
         help="use GPU for cellpose (--segmentation-method cellpose only)",
@@ -116,6 +117,10 @@ def main():
     parser.add_argument('--focus-min-score', type=float)
     parser.add_argument('--focus-min-cnr', type=float, default=1.0)
     parser.add_argument('--focus-min-agreement', type=float, default=0.6)
+    parser.add_argument('--min-foreground-fraction', type=float, default=0.001,
+                        help="refuse a frame whose segmentation claims less of it than this")
+    parser.add_argument('--max-foreground-fraction', type=float, default=0.2,
+                        help="refuse a frame whose segmentation claims more of it than this")
     args = parser.parse_args()
     from ichnos_image.focus import FocusPolicy
     focus_policy = FocusPolicy(args.focus_mode, args.focus_min_score,
@@ -152,6 +157,8 @@ def main():
         input_paths=[args.manifest] + ([args.controls] + [args.controls.parent / p for p in pd.read_csv(args.controls)[["control_green_path", "control_red_path"]].to_numpy().ravel()] if args.controls else []),
         segmentation_method=args.segmentation_method, segmentation_kwargs=segmentation_kwargs or None,
         background_method=args.background_method, rolling_ball_radius=args.rolling_ball_radius,
+        min_foreground_fraction=args.min_foreground_fraction,
+        max_foreground_fraction=args.max_foreground_fraction,
     )
 
     df = pd.read_csv(out_path)

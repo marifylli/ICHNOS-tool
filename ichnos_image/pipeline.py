@@ -25,6 +25,23 @@ from .schema import CellRecord
 from ichnos.schema import validate_elapsed_hours, validate_optional_identifier
 
 
+class SegmentationQCError(RuntimeError):
+    """Segmentation claimed an implausible share of the frame (Stage 2 QC).
+
+    Raised rather than flagged per cell, because there are no cells to flag:
+    when the threshold lands inside the background every "cell" downstream is
+    noise, and when it lands above the signal the few that survive are a
+    brightness-biased sample of the field. Either way the per-cell rows are
+    not a worse measurement of the right thing, they are a measurement of
+    something else, and QC that let them through would be read as a pass.
+
+    This stops the batch. That is the intent: on the team's 2026-10-05
+    session the unguarded failure produced 20390 "cells" from 5 frames and
+    took 15 hours, because every later stage runs per cell. Catch it per
+    image set if a batch should survive one bad frame.
+    """
+
+
 class CrosstalkCalibrationWarning(UserWarning):
     """Raised when one scalar crosstalk coefficient is applied across several
     imaging sessions. A subclass of UserWarning, so existing UserWarning
@@ -91,6 +108,8 @@ def process_image_set(
     background_method: str = "mode",
     rolling_ball_radius: float | None = None,
     focus_policy: FocusPolicy | None = None,
+    min_foreground_fraction: float = 0.001,
+    max_foreground_fraction: float = 0.2,
 ) -> list[CellRecord]:
     """Run Stages 2-5+8 on one image set, given a pre-calibrated crosstalk
     coefficient (from correct.calibrate_crosstalk_from_control(), once per
@@ -123,6 +142,24 @@ def process_image_set(
         raise ValueError("saturation_value must be finite and positive")
     segmentation_source = image_set.bright_field if image_set.bright_field is not None else image_set.green
     labels = segment.segment_cells(segmentation_source, method=segmentation_method, **(segmentation_kwargs or {}))
+
+    # Checked here, before anything runs per cell: this is the cheapest
+    # moment to find out, and every later stage scales with the cell count
+    # that a failure inflates. The bounds are deliberately wide -- a real
+    # yeast field sits at a few percent -- so that passing says only "not
+    # obviously broken", never "segmented well".
+    fraction = segment.foreground_fraction(labels)
+    if not min_foreground_fraction <= fraction <= max_foreground_fraction:
+        raise SegmentationQCError(
+            f"segmentation claimed {fraction:.1%} of the frame as cells "
+            f"({labels.max()} objects), outside the plausible "
+            f"{min_foreground_fraction:.1%}-{max_foreground_fraction:.1%}; "
+            f"session {image_set.session_id!r}, sample {image_set.sample_id!r}, "
+            f"method {segmentation_method!r}. Too high means the threshold fell "
+            "inside the background and the objects are noise; too low means it "
+            "fell above the signal and only the brightest cells survived. "
+            "For fluorescence frames try segmentation_method='sparse'."
+        )
 
     green, red = image_set.green, image_set.red
     if flat_field_green is not None:
@@ -228,6 +265,8 @@ def _process_experiment(
     background_method: str = "mode",
     rolling_ball_radius: float | None = None,
     focus_policy: FocusPolicy | None = None,
+    min_foreground_fraction: float = 0.001,
+    max_foreground_fraction: float = 0.2,
 ) -> Path:
     """Process every image set and write one combined CSV (Stage 8, final
     dataset -- every cell, every timepoint, every session in one file).
@@ -293,6 +332,8 @@ def _process_experiment(
             background_method=background_method,
             rolling_ball_radius=rolling_ball_radius,
             focus_policy=focus_policy,
+            min_foreground_fraction=min_foreground_fraction,
+            max_foreground_fraction=max_foreground_fraction,
         )
         export.export_csv(records, out_csv, append=True)
 
