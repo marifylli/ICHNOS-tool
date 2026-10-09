@@ -70,11 +70,16 @@ def test_unknowns_are_none_not_guessed():
     plausible default makes an unmeasured quantity indistinguishable from a
     measured one.
     """
-    assert instrument.FLUORESCENCE_OBJECTIVE is None
     assert instrument.LAMP_INTENSITY_PERCENT is None
     assert instrument.LAMP_BURNER_HOURS is None
     assert instrument.FLUORESCENCE_PRESET.post_snap_macro is None
     assert instrument.FLUORESCENCE_PRESET.post_snap_macro_confirmed is False
+
+
+def test_fluorescence_objective_is_the_confirmed_one():
+    """40X was confirmed for the October 2026 sessions; it must be a turret objective."""
+    assert instrument.FLUORESCENCE_OBJECTIVE == "40X"
+    assert instrument.FLUORESCENCE_OBJECTIVE in instrument.OBJECTIVES
 
 
 def test_profile_does_not_claim_quantitative_calibration():

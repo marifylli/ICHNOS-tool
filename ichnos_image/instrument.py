@@ -42,12 +42,10 @@ OBJECTIVES: dict[str, Objective] = {
     "60X": Objective("LUCPlanFLN 60X", 60.0, 0.70, None, (0.1, 1.3)),
 }
 
-# Which objective fluorescence will actually be taken with is NOT settled.
-# The dry lab proposed 40X; the wet lab has not confirmed it, and the
-# correction-collar position for the chosen vessel is also open. Left None
-# on purpose -- a pipeline that silently assumed one would produce a spatial
-# scale that looks measured and is not.
-FLUORESCENCE_OBJECTIVE: Optional[str] = None
+# Objective used for the fluorescence sessions of 5-9 October 2026 (H2O2 and
+# DTT, transfected and non-transfected): 40X, confirmed by the team on
+# 2026-10-10. The correction-collar position for the vessel is still open.
+FLUORESCENCE_OBJECTIVE: Optional[str] = "40X"
 
 
 # --------------------------------------------------------------------------
