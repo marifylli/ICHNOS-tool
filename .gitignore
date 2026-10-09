@@ -17,3 +17,4 @@ artifacts/
 !tests/fixtures/**/*.csv
 
 outputs/
+!data/acquisition/*.csv
