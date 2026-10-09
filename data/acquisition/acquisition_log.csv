@@ -1,0 +1,298 @@
+section,date,stressor,strain,tp_label,dose_uM,dose_units,rep,added,plating,bf,red,green,exp,exposure_acq_ms,sampling_time_hours,measurement_time_hours,folder,flags
+medium,2026-10-05,none,transfected,medium,,,,,,17:30,17:32,17:32,375,1500,,,A1:igem h2o2/θρεπτικό,
+medium,2026-10-08,none,non_transfected,medium,,,,,,13:47,13:46,13:46,200,800,,,B:igem h2o2 non transfected/ΘΡΕΠΤΙΚΌ,acq_derived_4x
+h2o2_series,2026-10-05,H2O2,transfected,0h,0,uM,,13:41,,14:28,14:32,14:33,400,1600,,0.850,A1:igem h2o2/0/0,
+h2o2_series,2026-10-05,H2O2,transfected,0h,20,uM,,13:41,,14:35,14:38,14:38,500,2000,,0.950,A1:igem h2o2/20/0,
+h2o2_series,2026-10-05,H2O2,transfected,0h,75,uM,,13:41,,14:41,14:46,14:46,350,1400,,1.083,A1:igem h2o2/75/0,
+h2o2_series,2026-10-05,H2O2,transfected,0h,300,uM,,13:41,,14:50,14:52,14:53,400,1600,,1.183,A1:igem h2o2/300/0,
+h2o2_series,2026-10-05,H2O2,transfected,0h,600,uM,,13:41,,14:57,14:59,15:00,350,1400,,1.300,A1:igem h2o2/600/0,
+h2o2_series,2026-10-05,H2O2,transfected,30 min,0,uM,,13:41,,15:07,15:09,15:09,350,1400,,1.467,A1:igem h2o2/0/30,
+h2o2_series,2026-10-05,H2O2,transfected,30 min,20,uM,,13:41,,15:11,15:13,15:14,300,1200,,1.533,A1:igem h2o2/20/30,
+h2o2_series,2026-10-05,H2O2,transfected,30 min,75,uM,,13:41,,15:17,15:19,15:19,350,1400,,1.633,A1:igem h2o2/75/30,
+h2o2_series,2026-10-05,H2O2,transfected,30 min,300,uM,,13:41,,15:21,15:22,15:23,300,1200,,1.683,A1:igem h2o2/300/30,
+h2o2_series,2026-10-05,H2O2,transfected,30 min,600,uM,,13:41,,15:25,15:29,15:29,600,2400,,1.800,A1:igem h2o2/600/30,
+h2o2_series,2026-10-05,H2O2,transfected,1h,0,uM,,13:41,,15:44,15:47,15:47,350,1400,,2.100,A1:igem h2o2/0/1h,
+h2o2_series,2026-10-05,H2O2,transfected,1h,20,uM,,13:41,,15:54,15:54,15:55,300,1200,,2.217,A1:igem h2o2/20/1h,
+h2o2_series,2026-10-05,H2O2,transfected,1h,75,uM,,13:41,,16:02,16:04,16:04,350,1400,,2.383,A1:igem h2o2/75/1h,
+h2o2_series,2026-10-05,H2O2,transfected,1h,300,uM,,13:41,,16:09,16:10,16:10,350,1400,,2.483,A1:igem h2o2/300/1h,
+h2o2_series,2026-10-05,H2O2,transfected,1h,600,uM,,13:41,,16:14,16:15,16:15,350,1400,,2.567,A1:igem h2o2/600/1h,
+h2o2_series,2026-10-05,H2O2,transfected,2h,0,uM,,13:41,,16:26,16:23,16:24,350,1400,,2.700,A1:igem h2o2/0/2h,
+h2o2_series,2026-10-05,H2O2,transfected,2h,20,uM,,13:41,,16:31,16:30,16:30,400,1600,,2.817,A1:igem h2o2/20/2h,
+h2o2_series,2026-10-05,H2O2,transfected,2h,75,uM,,13:41,,16:33,16:35,16:35,350,1400,,2.900,A1:igem h2o2/75/2h,
+h2o2_series,2026-10-05,H2O2,transfected,2h,300,uM,,13:41,,16:41,16:40,16:40,400,1600,,2.983,A1:igem h2o2/300/2h,
+h2o2_series,2026-10-05,H2O2,transfected,2h,600,uM,,13:41,,16:45,16:43,16:44,350,1400,,3.033,A1:igem h2o2/600/2h,
+h2o2_series,2026-10-05,H2O2,transfected,3h,0,uM,,13:41,,16:54,16:50,16:51,350,1400,,3.150,A1:igem h2o2/0/3h,
+h2o2_series,2026-10-05,H2O2,transfected,3h,20,uM,,13:41,,17:02,16:58,16:58,300,1200,,3.283,A1:igem h2o2/20/3h,
+h2o2_series,2026-10-05,H2O2,transfected,3h,75,uM,,13:41,,17:09,17:08,17:08,400,1600,,3.450,A1:igem h2o2/75/3h,
+h2o2_series,2026-10-05,H2O2,transfected,3h,300,uM,cluster,13:41,,17:15,17:13,17:14,400,1600,,3.533,A1:igem h2o2/300/3h,
+h2o2_series,2026-10-05,H2O2,transfected,3h,300,uM,normal,13:41,,17:18,17:17,17:17,350,1400,,3.600,A1:igem h2o2/300/3h,
+h2o2_series,2026-10-05,H2O2,transfected,3h,600,uM,,13:41,,17:24,17:22,17:23,350,1400,,3.683,A1:igem h2o2/600/3h,
+h2o2_series,2026-10-06,H2O2,transfected,6h,0,uM,,11:55,,17:55,17:52,17:52,300,1200,,5.950,A2:igem h2o2 palia/0/6h,
+h2o2_series,2026-10-06,H2O2,transfected,6h,20,uM,,11:55,,17:57,17:55,17:56,300,1200,,6.000,A2:igem h2o2 palia/20/6h,
+h2o2_series,2026-10-06,H2O2,transfected,6h,75,uM,,11:55,,18:01,18:00,18:00,300,1200,,6.083,A2:igem h2o2 palia/75/6h,
+h2o2_series,2026-10-06,H2O2,transfected,6h,300,uM,cluster,11:55,,18:04,18:03,18:03,300,1200,,6.133,A2:igem h2o2 palia/300/6h,
+h2o2_series,2026-10-06,H2O2,transfected,6h,600,uM,,11:55,,18:09,18:07,18:07,300,1200,,6.200,A2:igem h2o2 palia/600/6h,
+h2o2_series,2026-10-06,H2O2,transfected,7h,0,uM,,11:55,,18:53,18:52,18:52,300,1200,,6.950,A2:igem h2o2 palia/0/7h,
+h2o2_series,2026-10-06,H2O2,transfected,7h,20,uM,,11:55,,18:56,18:56,18:56,300,1200,,7.017,A2:igem h2o2 palia/20/7h,
+h2o2_series,2026-10-06,H2O2,transfected,7h,75,uM,,11:55,,18:59,18:57,18:58,400,1600,,7.033,A2:igem h2o2 palia/75/7h,
+h2o2_series,2026-10-06,H2O2,transfected,7h,300,uM,cluster,11:55,,19:03,19:02,19:02,400,1600,,7.117,A2:igem h2o2 palia/300/7h,
+h2o2_series,2026-10-06,H2O2,transfected,7h,600,uM,,11:55,,19:06,19:05,19:05,400,1600,,7.167,A2:igem h2o2 palia/600/7h,
+h2o2_0710_0min,2026-10-07,H2O2,transfected,0min,600,uM,single,11:00,,11:57,11:55,11:56,300,1200,,0.917,C2:igem h2o2 Vol 2/600/1h,log_says_~30min_but_11:00_gives_~55min
+h2o2_0710_0min,2026-10-07,H2O2,transfected,0min,0,uM,single,11:00,,12:00,11:59,11:59,300,1200,,0.983,C2:igem h2o2 Vol 2/0/1h,log_says_~30min_but_11:00_gives_~55min
+h2o2_0710_0min,2026-10-07,H2O2,transfected,0min,20,uM,single,11:00,,12:03,12:03,12:03,300,1200,,1.050,C2:igem h2o2 Vol 2/20/1h,log_says_~30min_but_11:00_gives_~55min
+h2o2_0710_0min,2026-10-07,H2O2,transfected,0min,75,uM,single,11:00,,12:09,12:08,12:08,300,1200,,1.133,C2:igem h2o2 Vol 2/75/1h,log_says_~30min_but_11:00_gives_~55min
+h2o2_0710_0min,2026-10-07,H2O2,transfected,0min,300,uM,single,11:00,,12:10,12:10,12:10,300,1200,,1.167,C2:igem h2o2 Vol 2/300/1h,log_says_~30min_but_11:00_gives_~55min
+h2o2_0710_s1245,2026-10-07,H2O2,transfected,strosi_12:45,0,uM,R1,11:00,12:45,13:04,13:03,13:03,300,1200,1.750,2.050,C2:igem h2o2 Vol 2/0/2h,
+h2o2_0710_s1245,2026-10-07,H2O2,transfected,strosi_12:45,0,uM,R2,11:00,12:45,13:06,13:05,13:05,300,1200,1.750,2.083,C2:igem h2o2 Vol 2/0/2h,
+h2o2_0710_s1245,2026-10-07,H2O2,transfected,strosi_12:45,0,uM,R3,11:00,12:45,13:08,13:07,13:08,300,1200,1.750,2.117,C2:igem h2o2 Vol 2/0/2h,
+h2o2_0710_s1245,2026-10-07,H2O2,transfected,strosi_12:45,20,uM,R1,11:00,12:45,13:11,13:10,13:11,300,1200,1.750,2.167,C2:igem h2o2 Vol 2/20/2h,
+h2o2_0710_s1245,2026-10-07,H2O2,transfected,strosi_12:45,20,uM,R2,11:00,12:45,13:14,13:12,13:12,300,1200,1.750,2.200,C2:igem h2o2 Vol 2/20/2h,
+h2o2_0710_s1245,2026-10-07,H2O2,transfected,strosi_12:45,20,uM,R3,11:00,12:45,13:17,13:15,13:15,300,1200,1.750,2.250,C2:igem h2o2 Vol 2/20/2h,
+h2o2_0710_s1245,2026-10-07,H2O2,transfected,strosi_12:45,75,uM,R1,11:00,12:45,13:21,13:20,13:20,300,1200,1.750,2.333,C2:igem h2o2 Vol 2/75/2h,
+h2o2_0710_s1245,2026-10-07,H2O2,transfected,strosi_12:45,75,uM,R2,11:00,12:45,13:23,13:23,13:23,300,1200,1.750,2.383,C2:igem h2o2 Vol 2/75/2h,
+h2o2_0710_s1245,2026-10-07,H2O2,transfected,strosi_12:45,75,uM,R3,11:00,12:45,13:27,13:25,13:25,300,1200,1.750,2.417,C2:igem h2o2 Vol 2/75/2h,
+h2o2_0710_s1245,2026-10-07,H2O2,transfected,strosi_12:45,300,uM,R1,11:00,12:45,13:29,13:28,13:29,300,1200,1.750,2.467,C2:igem h2o2 Vol 2/300/2h,
+h2o2_0710_s1245,2026-10-07,H2O2,transfected,strosi_12:45,300,uM,R2,11:00,12:45,13:32,13:30,13:30,300,1200,1.750,2.500,C2:igem h2o2 Vol 2/300/2h,
+h2o2_0710_s1245,2026-10-07,H2O2,transfected,strosi_12:45,300,uM,R3,11:00,12:45,13:34,13:33,13:33,300,1200,1.750,2.550,C2:igem h2o2 Vol 2/300/2h,
+h2o2_0710_s1245,2026-10-07,H2O2,transfected,strosi_12:45,600,uM,R1,11:00,12:45,13:37,13:35,13:37,300,1200,1.750,2.583,C2:igem h2o2 Vol 2/600/2h,
+h2o2_0710_s1245,2026-10-07,H2O2,transfected,strosi_12:45,600,uM,R2,11:00,12:45,13:39,13:38,13:38,300,1200,1.750,2.633,C2:igem h2o2 Vol 2/600/2h,
+h2o2_0710_s1245,2026-10-07,H2O2,transfected,strosi_12:45,600,uM,R3,11:00,12:45,13:41,13:40,13:40,300,1200,1.750,2.667,C2:igem h2o2 Vol 2/600/2h,
+h2o2_0710_s1429,2026-10-07,H2O2,transfected,strosi_14:29,0,uM,R1,11:00,14:29,14:31,14:30,14:30,300,1200,3.483,3.500,C2:igem h2o2 Vol 2/0/3h,
+h2o2_0710_s1429,2026-10-07,H2O2,transfected,strosi_14:29,0,uM,R2,11:00,14:29,14:34,14:33,14:33,300,1200,3.483,3.550,C2:igem h2o2 Vol 2/0/3h,starred_in_log:bf
+h2o2_0710_s1429,2026-10-07,H2O2,transfected,strosi_14:29,0,uM,R3,11:00,14:29,14:37,14:35,14:35,300,1200,3.483,3.583,C2:igem h2o2 Vol 2/0/3h,
+h2o2_0710_s1429,2026-10-07,H2O2,transfected,strosi_14:29,20,uM,R1,11:00,14:29,14:41,14:40,14:40,300,1200,3.483,3.667,C2:igem h2o2 Vol 2/20/3h,
+h2o2_0710_s1429,2026-10-07,H2O2,transfected,strosi_14:29,20,uM,R2,11:00,14:29,14:44,14:43,14:43,300,1200,3.483,3.717,C2:igem h2o2 Vol 2/20/3h,
+h2o2_0710_s1429,2026-10-07,H2O2,transfected,strosi_14:29,20,uM,R3,11:00,14:29,14:47,14:45,14:45,300,1200,3.483,3.750,C2:igem h2o2 Vol 2/20/3h,
+h2o2_0710_s1429,2026-10-07,H2O2,transfected,strosi_14:29,75,uM,R1,11:00,14:29,14:50,14:49,14:49,200,800,3.483,3.817,C2:igem h2o2 Vol 2/75/3h,acq_derived_4x
+h2o2_0710_s1429,2026-10-07,H2O2,transfected,strosi_14:29,75,uM,R2,11:00,14:29,14:53,14:51,14:51,200,800,3.483,3.850,C2:igem h2o2 Vol 2/75/3h,acq_derived_4x
+h2o2_0710_s1429,2026-10-07,H2O2,transfected,strosi_14:29,75,uM,R3,11:00,14:29,14:55,14:54,14:54,200,800,3.483,3.900,C2:igem h2o2 Vol 2/75/3h,acq_derived_4x
+h2o2_0710_s1429,2026-10-07,H2O2,transfected,strosi_14:29,300,uM,R1,11:00,14:29,14:59,14:57,14:57,200,800,3.483,3.950,C2:igem h2o2 Vol 2/300/3h,acq_derived_4x
+h2o2_0710_s1429,2026-10-07,H2O2,transfected,strosi_14:29,300,uM,R2,11:00,14:29,15:01,15:00,15:00,200,800,3.483,4.000,C2:igem h2o2 Vol 2/300/3h,acq_derived_4x
+h2o2_0710_s1429,2026-10-07,H2O2,transfected,strosi_14:29,300,uM,R3,11:00,14:29,15:04,15:02,15:02,200,800,3.483,4.033,C2:igem h2o2 Vol 2/300/3h,acq_derived_4x
+h2o2_0710_s1429,2026-10-07,H2O2,transfected,strosi_14:29,600,uM,R1,11:00,14:29,15:06,15:05,15:05,200,800,3.483,4.083,C2:igem h2o2 Vol 2/600/3h,acq_derived_4x
+h2o2_0710_s1429,2026-10-07,H2O2,transfected,strosi_14:29,600,uM,R2,11:00,14:29,15:10,15:09,15:09,200,800,3.483,4.150,C2:igem h2o2 Vol 2/600/3h,acq_derived_4x
+h2o2_0710_s1429,2026-10-07,H2O2,transfected,strosi_14:29,600,uM,R3,11:00,14:29,15:12,15:11,15:11,200,800,3.483,4.183,C2:igem h2o2 Vol 2/600/3h,acq_derived_4x
+h2o2_0710_s1704,2026-10-07,H2O2,transfected,strosi_17:04,0,uM,R1,11:00,17:04,17:08,17:06,17:07,200,800,6.067,6.100,C2:igem h2o2 Vol 2/0/6h,acq_derived_4x
+h2o2_0710_s1704,2026-10-07,H2O2,transfected,strosi_17:04,0,uM,R2,11:00,17:04,17:10,17:09,17:09,200,800,6.067,6.150,C2:igem h2o2 Vol 2/0/6h,acq_derived_4x
+h2o2_0710_s1704,2026-10-07,H2O2,transfected,strosi_17:04,0,uM,R3,11:00,17:04,17:12,17:11,17:11,200,800,6.067,6.183,C2:igem h2o2 Vol 2/0/6h,acq_derived_4x
+h2o2_0710_s1704,2026-10-07,H2O2,transfected,strosi_17:04,20,uM,R1,11:00,17:04,17:14,17:13,17:13,200,800,6.067,6.217,C2:igem h2o2 Vol 2/20/6h,acq_derived_4x
+h2o2_0710_s1704,2026-10-07,H2O2,transfected,strosi_17:04,20,uM,R2,11:00,17:04,17:17,17:15,17:15,200,800,6.067,6.250,C2:igem h2o2 Vol 2/20/6h,acq_derived_4x
+h2o2_0710_s1704,2026-10-07,H2O2,transfected,strosi_17:04,20,uM,R3,11:00,17:04,17:19,17:18,17:19,200,800,6.067,6.300,C2:igem h2o2 Vol 2/20/6h,acq_derived_4x
+h2o2_0710_s1704,2026-10-07,H2O2,transfected,strosi_17:04,75,uM,R1,11:00,17:04,18:16,18:15,18:15,200,800,6.067,7.250,C2:igem h2o2 Vol 2/75/6h,acq_derived_4x;waited_~1h_longer_on_slide
+h2o2_0710_s1704,2026-10-07,H2O2,transfected,strosi_17:04,75,uM,R2,11:00,17:04,18:20,18:18,18:18,200,800,6.067,7.300,C2:igem h2o2 Vol 2/75/6h,acq_derived_4x;waited_~1h_longer_on_slide
+h2o2_0710_s1704,2026-10-07,H2O2,transfected,strosi_17:04,75,uM,R3,11:00,17:04,18:21,18:20,18:21,200,800,6.067,7.333,C2:igem h2o2 Vol 2/75/6h,acq_derived_4x;waited_~1h_longer_on_slide
+h2o2_0710_s1704,2026-10-07,H2O2,transfected,strosi_17:04,300,uM,R1,11:00,17:04,18:26,18:25,18:25,200,800,6.067,7.417,C2:igem h2o2 Vol 2/300/6h,acq_derived_4x;waited_~1h_longer_on_slide
+h2o2_0710_s1704,2026-10-07,H2O2,transfected,strosi_17:04,300,uM,R2,11:00,17:04,18:28,18:27,18:27,200,800,6.067,7.450,C2:igem h2o2 Vol 2/300/6h,acq_derived_4x;waited_~1h_longer_on_slide
+h2o2_0710_s1704,2026-10-07,H2O2,transfected,strosi_17:04,300,uM,R3,11:00,17:04,18:33,18:29,18:30,200,800,6.067,7.483,C2:igem h2o2 Vol 2/300/6h,acq_derived_4x;waited_~1h_longer_on_slide
+h2o2_0710_s1704,2026-10-07,H2O2,transfected,strosi_17:04,600,uM,R1,11:00,17:04,18:34,18:33,18:36,200,800,6.067,7.550,C2:igem h2o2 Vol 2/600/6h,starred_in_log:green;acq_derived_4x;waited_~1h_longer_on_slide
+h2o2_0710_s1704,2026-10-07,H2O2,transfected,strosi_17:04,600,uM,R2,11:00,17:04,18:36,18:34,18:37,200,800,6.067,7.567,C2:igem h2o2 Vol 2/600/6h,starred_in_log:green;acq_derived_4x;waited_~1h_longer_on_slide
+h2o2_0710_s1704,2026-10-07,H2O2,transfected,strosi_17:04,600,uM,R3,11:00,17:04,18:38,18:37,18:29,200,800,6.067,7.617,C2:igem h2o2 Vol 2/600/6h,starred_in_log:green;acq_derived_4x;waited_~1h_longer_on_slide
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,0h,0,uM,R1,12:44,12:44,12:58,12:57,12:57,200,800,0.000,0.217,B:igem h2o2 non transfected/0/0h,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,0h,0,uM,R2,12:44,12:44,13:01,13:00,13:01,200,800,0.000,0.267,B:igem h2o2 non transfected/0/0h,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,0h,0,uM,R3,12:44,12:44,13:06,13:05,13:05,200,800,0.000,0.350,B:igem h2o2 non transfected/0/0h,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,0h,20,uM,R1,12:44,12:44,13:08,13:07,13:07,200,800,0.000,0.383,B:igem h2o2 non transfected/20/0h,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,0h,20,uM,R2,12:44,12:44,13:11,13:10,13:11,200,800,0.000,0.433,B:igem h2o2 non transfected/20/0h,exp_from_section_note;starred_in_log:red;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,0h,20,uM,R3,12:44,12:44,13:15,13:14,13:15,200,800,0.000,0.500,B:igem h2o2 non transfected/20/0h,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,0h,75,uM,R1,12:44,12:44,13:17,13:16,13:16,200,800,0.000,0.533,B:igem h2o2 non transfected/75/0h,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,0h,75,uM,R2,12:44,12:44,13:19,13:18,13:19,200,800,0.000,0.567,B:igem h2o2 non transfected/75/0h,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,0h,75,uM,R3,12:44,12:44,13:21,13:20,13:21,200,800,0.000,0.600,B:igem h2o2 non transfected/75/0h,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,0h,300,uM,R1,12:44,12:44,13:24,13:22,13:23,200,800,0.000,0.633,B:igem h2o2 non transfected/300/0h,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,0h,300,uM,R2,12:44,12:44,13:27,13:26,13:27,200,800,0.000,0.700,B:igem h2o2 non transfected/300/0h,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,0h,300,uM,R3,12:44,12:44,13:34,13:33,13:33,200,800,0.000,0.817,B:igem h2o2 non transfected/300/0h,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,0h,600,uM,R1,12:44,12:44,13:39,13:38,13:38,200,800,0.000,0.900,B:igem h2o2 non transfected/600/0h,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,0h,600,uM,R2,12:44,12:44,13:42,13:40,13:41,200,800,0.000,0.933,B:igem h2o2 non transfected/600/0h,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,0h,600,uM,R3,12:44,12:44,13:47,13:44,13:45,200,800,0.000,1.000,B:igem h2o2 non transfected/600/0h,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,30 min,0,uM,R1,12:44,12:44,13:50,13:48,13:49,200,800,0.000,1.067,B:igem h2o2 non transfected/0/30',exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,30 min,0,uM,R2,12:44,12:44,13:54,13:53,13:53,200,800,0.000,1.150,B:igem h2o2 non transfected/0/30',exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,30 min,0,uM,R3,12:44,12:44,13:59,13:58,13:58,200,800,0.000,1.233,B:igem h2o2 non transfected/0/30',exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,30 min,20,uM,R1,12:44,12:44,14:01,14:00,14:01,200,800,0.000,1.267,B:igem h2o2 non transfected/20/30',exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,30 min,20,uM,R2,12:44,12:44,14:03,14:01,14:02,200,800,0.000,1.283,B:igem h2o2 non transfected/20/30',exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,30 min,20,uM,R3,12:44,12:44,14:06,14:04,14:04,200,800,0.000,1.333,B:igem h2o2 non transfected/20/30',exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,30 min,75,uM,R1,12:44,12:44,14:09,14:07,14:07,200,800,0.000,1.383,B:igem h2o2 non transfected/75/30',exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,30 min,75,uM,R2,12:44,12:44,14:12,14:10,14:11,200,800,0.000,1.433,B:igem h2o2 non transfected/75/30',exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,30 min,75,uM,R3,12:44,12:44,14:14,14:13,14:13,200,800,0.000,1.483,B:igem h2o2 non transfected/75/30',exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,30 min,300,uM,R1,12:44,12:44,14:16,14:15,14:15,200,800,0.000,1.517,B:igem h2o2 non transfected/300/30',exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,30 min,300,uM,R2,12:44,12:44,14:19,14:17,14:17,200,800,0.000,1.550,B:igem h2o2 non transfected/300/30',exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,30 min,300,uM,R3,12:44,12:44,14:22,14:20,14:20,200,800,0.000,1.600,B:igem h2o2 non transfected/300/30',exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,30 min,600,uM,R1,12:44,12:44,14:26,14:25,14:25,200,800,0.000,1.683,B:igem h2o2 non transfected/600/30',exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,30 min,600,uM,R2,12:44,12:44,14:29,14:28,14:28,200,800,0.000,1.733,B:igem h2o2 non transfected/600/30',exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,30 min,600,uM,R3,12:44,12:44,14:36,14:34,14:35,200,800,0.000,1.833,B:igem h2o2 non transfected/600/30',exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,1h,0,uM,R1,12:44,12:44,14:39,14:38,14:38,200,800,0.000,1.900,B:igem h2o2 non transfected/0/1Η,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,1h,0,uM,R2,12:44,12:44,14:42,14:41,14:41,200,800,0.000,1.950,B:igem h2o2 non transfected/0/1Η,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,1h,0,uM,R3,12:44,12:44,14:47,14:45,14:45,200,800,0.000,2.017,B:igem h2o2 non transfected/0/1Η,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,1h,20,uM,R1,12:44,12:44,14:49,14:47,14:48,200,800,0.000,2.050,B:igem h2o2 non transfected/20/1Η,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,1h,20,uM,R2,12:44,12:44,14:54,14:52,14:52,200,800,0.000,2.133,B:igem h2o2 non transfected/20/1Η,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,1h,20,uM,R3,12:44,12:44,14:57,14:55,14:56,200,800,0.000,2.183,B:igem h2o2 non transfected/20/1Η,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,1h,75,uM,R1,12:44,12:44,14:59,14:58,14:58,200,800,0.000,2.233,B:igem h2o2 non transfected/75/1Η,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,1h,75,uM,R2,12:44,12:44,15:01,15:00,15:00,200,800,0.000,2.267,B:igem h2o2 non transfected/75/1Η,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,1h,75,uM,R3,12:44,12:44,15:03,15:02,15:03,200,800,0.000,2.300,B:igem h2o2 non transfected/75/1Η,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,1h,300,uM,R1,12:44,12:44,15:05,15:04,15:04,200,800,0.000,2.333,B:igem h2o2 non transfected/300/1Η,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,1h,300,uM,R2,12:44,12:44,15:07,15:06,15:07,200,800,0.000,2.367,B:igem h2o2 non transfected/300/1Η,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,1h,300,uM,R3,12:44,12:44,15:09,15:08,15:08,200,800,0.000,2.400,B:igem h2o2 non transfected/300/1Η,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,1h,600,uM,R1,12:44,12:44,15:13,15:10,15:11,200,800,0.000,2.433,B:igem h2o2 non transfected/600/1Η,exp_from_section_note;starred_in_log:green;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,1h,600,uM,R2,12:44,12:44,15:16,15:15,15:15,200,800,0.000,2.517,B:igem h2o2 non transfected/600/1Η,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+nt_h2o2_0810,2026-10-08,H2O2,non_transfected,1h,600,uM,R3,12:44,12:44,15:19,15:17,15:17,200,800,0.000,2.550,B:igem h2o2 non transfected/600/1Η,exp_from_section_note;acq_derived_4x;log_covers_0-1h_only
+dtt_0610,2026-10-06,DTT,transfected,0 min,0,uM,,12:49,12:49,13:10,13:06,13:06,300,1200,0.000,0.283,A3:igem DTT/0/0,
+dtt_0610,2026-10-06,DTT,transfected,0 min,10,uM,,12:49,12:49,13:17,13:16,13:16,300,1200,0.000,0.450,A3:igem DTT/10/0,
+dtt_0610,2026-10-06,DTT,transfected,0 min,25,uM,,12:49,12:49,13:22,13:20,13:20,300,1200,0.000,0.517,A3:igem DTT/25/0,
+dtt_0610,2026-10-06,DTT,transfected,0 min,50,uM,,12:49,12:49,13:25,13:24,13:24,300,1200,0.000,0.583,A3:igem DTT/50/0,
+dtt_0610,2026-10-06,DTT,transfected,0 min,100,uM,,12:49,12:49,13:31,13:29,13:29,350,1400,0.000,0.667,A3:igem DTT/100/0,
+dtt_0610,2026-10-06,DTT,transfected,0 min,200,uM,,12:49,12:49,13:35,13:33,13:33,350,1400,0.000,0.733,A3:igem DTT/200/0,
+dtt_0610,2026-10-06,DTT,transfected,45 min,0,uM,,12:49,13:35,13:43,13:41,13:41,350,1400,0.767,0.867,A3:igem DTT/0/45,
+dtt_0610,2026-10-06,DTT,transfected,45 min,10,uM,,12:49,13:35,13:48,13:45,13:46,300,1200,0.767,0.933,A3:igem DTT/10/45,
+dtt_0610,2026-10-06,DTT,transfected,45 min,25,uM,,12:49,13:35,13:52,13:51,13:51,300,1200,0.767,1.033,A3:igem DTT/25/45,
+dtt_0610,2026-10-06,DTT,transfected,45 min,50,uM,,12:49,13:35,13:55,13:54,13:54,300,1200,0.767,1.083,A3:igem DTT/50/45,
+dtt_0610,2026-10-06,DTT,transfected,45 min,100,uM,,12:49,13:35,13:59,13:58,13:58,300,1200,0.767,1.150,A3:igem DTT/100/45,
+dtt_0610,2026-10-06,DTT,transfected,45 min,200,uM,,12:49,13:35,14:02,14:02,14:02,300,1200,0.767,1.217,A3:igem DTT/200/45,
+dtt_0610,2026-10-06,DTT,transfected,1h,0,uM,,12:49,13:49,14:55,14:54,14:55,250,1000,1.000,2.083,A3:igem DTT/0/2h,plating_time_starred;acq_derived_4x
+dtt_0610,2026-10-06,DTT,transfected,1h,10,uM,,12:49,13:49,14:59,14:57,14:57,250,1000,1.000,2.133,A3:igem DTT/10/2h,plating_time_starred;acq_derived_4x
+dtt_0610,2026-10-06,DTT,transfected,1h,25,uM,,12:49,13:49,15:05,15:01,15:01,300,1200,1.000,2.200,A3:igem DTT/25/2h,plating_time_starred
+dtt_0610,2026-10-06,DTT,transfected,1h,50,uM,,12:49,13:49,15:09,15:08,15:08,300,1200,1.000,2.317,A3:igem DTT/50/2h,plating_time_starred
+dtt_0610,2026-10-06,DTT,transfected,1h,100,uM,cluster,12:49,13:49,15:14,15:13,15:13,300,1200,1.000,2.400,A3:igem DTT/100/2h,plating_time_starred
+dtt_0610,2026-10-06,DTT,transfected,1h,100,uM,normal,12:49,13:49,15:15,15:14,15:14,300,1200,1.000,2.417,A3:igem DTT/100/2h,plating_time_starred
+dtt_0610,2026-10-06,DTT,transfected,1h,200,uM,,12:49,13:49,15:18,15:18,15:18,350,1400,1.000,2.483,A3:igem DTT/200/2h,plating_time_starred
+dtt_0610,2026-10-06,DTT,transfected,4h,0,uM,,12:49,16:49,16:59,16:57,16:57,300,1200,4.000,4.133,A3:igem DTT/0/4h,
+dtt_0610,2026-10-06,DTT,transfected,4h,10,uM,,12:49,16:49,17:02,17:00,17:00,300,1200,4.000,4.183,A3:igem DTT/10/4h,
+dtt_0610,2026-10-06,DTT,transfected,4h,25,uM,,12:49,16:49,17:08,17:07,17:07,300,1200,4.000,4.300,A3:igem DTT/25/4h,
+dtt_0610,2026-10-06,DTT,transfected,4h,50,uM,cluster,12:49,16:49,17:11,17:10,17:10,300,1200,4.000,4.350,A3:igem DTT/50/4h,
+dtt_0610,2026-10-06,DTT,transfected,4h,50,uM,normal,12:49,16:49,17:16,17:13,17:13,300,1200,4.000,4.400,A3:igem DTT/50/4h,
+dtt_0610,2026-10-06,DTT,transfected,4h,100,uM,,12:49,16:49,17:20,17:18,17:18,300,1200,4.000,4.483,A3:igem DTT/100/4h,
+dtt_0610,2026-10-06,DTT,transfected,4h,200,uM,,12:49,16:49,17:22,17:21,17:21,300,1200,4.000,4.533,A3:igem DTT/200/4h,
+dtt_0610,2026-10-06,DTT,transfected,5h,0,uM,,12:49,17:49,18:19,18:16,18:16,300,1200,5.000,5.450,A3:igem DTT/0/5h,
+dtt_0610,2026-10-06,DTT,transfected,5h,10,uM,,12:49,17:49,18:22,18:19,18:21,300,1200,5.000,5.500,A3:igem DTT/10/5h,
+dtt_0610,2026-10-06,DTT,transfected,5h,25,uM,,12:49,17:49,18:32,18:30,18:31,300,1200,5.000,5.683,A3:igem DTT/25/5h,
+dtt_0610,2026-10-06,DTT,transfected,5h,50,uM,,12:49,17:49,18:34,18:33,18:33,300,1200,5.000,5.733,A3:igem DTT/50/5h,
+dtt_0610,2026-10-06,DTT,transfected,5h,100,uM,,12:49,17:49,18:37,18:36,18:36,300,1200,5.000,5.783,A3:igem DTT/100/5h,
+dtt_0610,2026-10-06,DTT,transfected,5h,200,uM,,12:49,17:49,18:40,18:38,18:39,300,1200,5.000,5.817,A3:igem DTT/200/5h,
+dtt_0610,2026-10-06,DTT,transfected,6h,0,uM,,12:49,18:49,19:09,19:08,19:08,400,1600,6.000,6.317,A3:igem DTT/0/6h,plating_time_starred;plating_19:49_read_as_18:49
+dtt_0610,2026-10-06,DTT,transfected,6h,10,uM,,12:49,18:49,19:13,19:12,19:12,400,1600,6.000,6.383,A3:igem DTT/10/6h,plating_time_starred;plating_19:49_read_as_18:49
+dtt_0610,2026-10-06,DTT,transfected,6h,25,uM,,12:49,18:49,19:17,19:16,19:16,400,1600,6.000,6.450,A3:igem DTT/25/6h,plating_time_starred;plating_19:49_read_as_18:49
+dtt_0610,2026-10-06,DTT,transfected,6h,50,uM,,12:49,18:49,19:19,19:18,19:19,350,1400,6.000,6.483,A3:igem DTT/50/6h,plating_time_starred;plating_19:49_read_as_18:49
+dtt_0610,2026-10-06,DTT,transfected,6h,100,uM,,12:49,18:49,19:22,19:21,19:21,300,1200,6.000,6.533,A3:igem DTT/100/6h,plating_time_starred;plating_19:49_read_as_18:49
+dtt_0610,2026-10-06,DTT,transfected,6h,200,uM,,12:49,18:49,19:25,19:24,19:24,300,1200,6.000,6.583,A3:igem DTT/200/6h,plating_time_starred;plating_19:49_read_as_18:49
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,0,uM,R1,12:50,13:35,13:48,13:46,13:46,300,1200,0.750,0.933,C1:IGEM DTT VOL2/0/45',
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,0,uM,R2,12:50,13:35,13:51,13:50,13:51,300,1200,0.750,1.000,C1:IGEM DTT VOL2/0/45',starred_in_log:red
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,0,uM,R3,12:50,13:35,13:53,13:52,13:52,300,1200,0.750,1.033,C1:IGEM DTT VOL2/0/45',
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,10,uM,R1,12:50,13:35,13:55,13:54,13:54,300,1200,0.750,1.067,C1:IGEM DTT VOL2/10/45',
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,10,uM,R2,12:50,13:35,13:57,13:56,13:57,300,1200,0.750,1.100,C1:IGEM DTT VOL2/10/45',starred_in_log:red
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,10,uM,R3,12:50,13:35,13:59,13:58,13:58,300,1200,0.750,1.133,C1:IGEM DTT VOL2/10/45',
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,25,uM,R1,12:50,13:35,14:01,14:00,14:01,300,1200,0.750,1.167,C1:IGEM DTT VOL2/25/45',
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,25,uM,R2,12:50,13:35,14:03,14:02,14:02,300,1200,0.750,1.200,C1:IGEM DTT VOL2/25/45',
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,25,uM,R3,12:50,13:35,14:05,14:04,14:05,300,1200,0.750,1.233,C1:IGEM DTT VOL2/25/45',
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,50,uM,R1,12:50,13:35,14:07,14:06,14:06,300,1200,0.750,1.267,C1:IGEM DTT VOL2/50/45',
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,50,uM,R2,12:50,13:35,14:11,14:10,14:11,300,1200,0.750,1.333,C1:IGEM DTT VOL2/50/45',
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,50,uM,R3,12:50,13:35,14:13,14:12,14:13,300,1200,0.750,1.367,C1:IGEM DTT VOL2/50/45',
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,100,uM,R1,12:50,13:35,14:16,14:16,14:16,300,1200,0.750,1.433,C1:IGEM DTT VOL2/100/45',
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,100,uM,R2,12:50,13:35,14:18,14:17,14:18,300,1200,0.750,1.450,C1:IGEM DTT VOL2/100/45',
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,100,uM,R3,12:50,13:35,14:21,14:19,14:20,300,1200,0.750,1.483,C1:IGEM DTT VOL2/100/45',
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,200,uM,R1,12:50,13:35,14:23,14:22,14:22,300,1200,0.750,1.533,C1:IGEM DTT VOL2/200/45',
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,200,uM,R2,12:50,13:35,14:25,14:25,14:25,300,1200,0.750,1.583,C1:IGEM DTT VOL2/200/45',
+dtt_0710_s1335,2026-10-07,DTT,transfected,45min,200,uM,R3,12:50,13:35,14:27,14:26,14:27,300,1200,0.750,1.600,C1:IGEM DTT VOL2/200/45',
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),0,uM,R1,12:50,15:20,15:25,15:23,15:23,200,800,2.500,2.550,C1:IGEM DTT VOL2/0/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),0,uM,R2,12:50,15:20,15:27,15:25,15:25,200,800,2.500,2.583,C1:IGEM DTT VOL2/0/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),0,uM,R3,12:50,15:20,15:29,15:28,15:28,200,800,2.500,2.633,C1:IGEM DTT VOL2/0/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),10,uM,R1,12:50,15:20,15:32,15:31,15:32,250,1000,2.500,2.683,C1:IGEM DTT VOL2/10/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),10,uM,R2,12:50,15:20,15:34,15:33,15:33,250,1000,2.500,2.717,C1:IGEM DTT VOL2/10/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),10,uM,R3,12:50,15:20,15:37,15:35,15:35,250,1000,2.500,2.750,C1:IGEM DTT VOL2/10/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),25,uM,R1,12:50,15:20,15:40,15:39,15:39,200,800,2.500,2.817,C1:IGEM DTT VOL2/25/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),25,uM,R2,12:50,15:20,15:45,15:44,15:44,200,800,2.500,2.900,C1:IGEM DTT VOL2/25/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),25,uM,R3,12:50,15:20,15:46,15:45,15:46,200,800,2.500,2.917,C1:IGEM DTT VOL2/25/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),50,uM,R1,12:50,15:20,15:50,15:48,15:48,200,800,2.500,2.967,C1:IGEM DTT VOL2/50/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),50,uM,R2,12:50,15:20,15:52,15:51,15:51,200,800,2.500,3.017,C1:IGEM DTT VOL2/50/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),50,uM,R3,12:50,15:20,15:55,15:54,15:55,200,800,2.500,3.067,C1:IGEM DTT VOL2/50/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),100,uM,R1,12:50,15:20,15:59,15:58,15:58,200,800,2.500,3.133,C1:IGEM DTT VOL2/100/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),100,uM,R2,12:50,15:20,16:02,16:02,16:01,200,800,2.500,3.200,C1:IGEM DTT VOL2/100/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),100,uM,R3,12:50,15:20,16:09,16:08,16:08,200,800,2.500,3.300,C1:IGEM DTT VOL2/100/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),200,uM,R1,12:50,15:20,16:12,16:11,16:11,200,800,2.500,3.350,C1:IGEM DTT VOL2/200/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),200,uM,R2,12:50,15:20,16:14,16:13,16:13,200,800,2.500,3.383,C1:IGEM DTT VOL2/200/2h,acq_derived_4x
+dtt_0710_s1520,2026-10-07,DTT,transfected,2h(actual_2.5h),200,uM,R3,12:50,15:20,16:16,16:15,16:15,200,800,2.500,3.417,C1:IGEM DTT VOL2/200/2h,acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,0,uM,R1,12:50,16:50,17:34,17:31,17:34,200,800,4.000,4.683,C1:IGEM DTT VOL2/0/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,0,uM,R2,12:50,16:50,17:36,17:35,17:35,200,800,4.000,4.750,C1:IGEM DTT VOL2/0/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,0,uM,R3,12:50,16:50,17:37,17:36,17:36,200,800,4.000,4.767,C1:IGEM DTT VOL2/0/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,10,uM,R1,12:50,16:50,17:39,17:38,17:38,200,800,4.000,4.800,C1:IGEM DTT VOL2/10/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,10,uM,R2,12:50,16:50,17:42,17:41,17:41,200,800,4.000,4.850,C1:IGEM DTT VOL2/10/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,10,uM,R3,12:50,16:50,17:44,17:43,17:43,200,800,4.000,4.883,C1:IGEM DTT VOL2/10/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,25,uM,R1,12:50,16:50,17:47,17:46,17:47,200,800,4.000,4.933,C1:IGEM DTT VOL2/25/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,25,uM,R2,12:50,16:50,17:49,17:48,17:48,200,800,4.000,4.967,C1:IGEM DTT VOL2/25/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,25,uM,R3,12:50,16:50,17:51,17:50,17:50,200,800,4.000,5.000,C1:IGEM DTT VOL2/25/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,50,uM,R1,12:50,16:50,17:53,17:52,17:52,200,800,4.000,5.033,C1:IGEM DTT VOL2/50/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,50,uM,R2,12:50,16:50,17:55,17:54,17:54,200,800,4.000,5.067,C1:IGEM DTT VOL2/50/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,50,uM,R3,12:50,16:50,17:57,17:55,17:56,200,800,4.000,5.083,C1:IGEM DTT VOL2/50/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,100,uM,R1,12:50,16:50,17:59,17:58,17:58,200,800,4.000,5.133,C1:IGEM DTT VOL2/100/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,100,uM,R2,12:50,16:50,18:01,18:00,18:00,200,800,4.000,5.167,C1:IGEM DTT VOL2/100/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,100,uM,R3,12:50,16:50,18:03,18:02,18:02,200,800,4.000,5.200,C1:IGEM DTT VOL2/100/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,200,uM,R1,12:50,16:50,18:06,18:05,18:06,200,800,4.000,5.250,C1:IGEM DTT VOL2/200/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,200,uM,R2,12:50,16:50,18:08,18:07,18:07,200,800,4.000,5.283,C1:IGEM DTT VOL2/200/4h,exp_from_section_note;acq_derived_4x
+dtt_0710_s1650,2026-10-07,DTT,transfected,4h,200,uM,R3,12:50,16:50,18:10,18:09,18:09,200,800,4.000,5.317,C1:IGEM DTT VOL2/200/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,0,uM,R1,12:20,,12:47,12:46,12:46,150,600,,0.433,D:igem DTT non transfected/0/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,0,uM,R2,12:20,,12:50,12:49,12:49,150,600,,0.483,D:igem DTT non transfected/0/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,0,uM,R3,12:20,,12:53,12:52,12:52,150,600,,0.533,D:igem DTT non transfected/0/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,10,uM,R1,12:20,,12:55,12:54,12:54,150,600,,0.567,D:igem DTT non transfected/10/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,10,uM,R2,12:20,,12:57,12:55,12:56,150,600,,0.583,D:igem DTT non transfected/10/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,10,uM,R3,12:20,,13:00,12:58,12:58,150,600,,0.633,D:igem DTT non transfected/10/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,25,uM,R1,12:20,,13:02,13:01,13:01,150,600,,0.683,D:igem DTT non transfected/25/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,25,uM,R2,12:20,,13:06,13:05,13:06,150,600,,0.750,D:igem DTT non transfected/25/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,25,uM,R3,12:20,,13:07,13:08,13:08,150,600,,0.800,D:igem DTT non transfected/25/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,50,uM,R1,12:20,,13:10,13:11,13:11,150,600,,0.850,D:igem DTT non transfected/50/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,50,uM,R2,12:20,,13:13,13:13,13:14,150,600,,0.883,D:igem DTT non transfected/50/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,50,uM,R3,12:20,,13:15,13:15,13:16,150,600,,0.917,D:igem DTT non transfected/50/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,100,uM,R1,12:20,,13:18,13:18,13:19,150,600,,0.967,D:igem DTT non transfected/100/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,100,uM,R2,12:20,,13:21,13:22,13:24,150,600,,1.033,D:igem DTT non transfected/100/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,100,uM,R3,12:20,,13:24,13:25,13:26,150,600,,1.083,D:igem DTT non transfected/100/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,200,uM,R1,12:20,,13:27,13:27,13:28,150,600,,1.117,D:igem DTT non transfected/200/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,200,uM,R2,12:20,,13:28,13:29,13:29,150,600,,1.150,D:igem DTT non transfected/200/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_0h,2026-10-09,DTT,non_transfected,0h,200,uM,R3,12:20,,13:30,13:30,13:31,150,600,,1.167,D:igem DTT non transfected/200/0h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,0,uM,R1,12:20,,13:36,13:33,13:34,150,600,,1.217,D:igem DTT non transfected/0/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,0,uM,R2,12:20,,13:41,13:38,13:38,150,600,,1.300,D:igem DTT non transfected/0/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,0,uM,R3,12:20,,13:42,13:41,13:42,150,600,,1.350,D:igem DTT non transfected/0/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,10,uM,R1,12:20,,13:45,13:43,13:44,150,600,,1.383,D:igem DTT non transfected/10/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,10,uM,R2,12:20,,13:46,13:45,13:46,150,600,,1.417,D:igem DTT non transfected/10/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,0,uM,R1,12:20,,13:36,13:33,13:34,150,600,,1.217,D:igem DTT non transfected/0/45',exp_from_section_note;acq_derived_4x;duplicate_row_in_log
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,10,uM,R3,12:20,,13:48,13:46,13:47,150,600,,1.433,D:igem DTT non transfected/10/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,25,uM,R1,12:20,,13:52,13:49,13:50,150,600,,1.483,D:igem DTT non transfected/25/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,25,uM,R2,12:20,,13:53,13:52,13:52,150,600,,1.533,D:igem DTT non transfected/25/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,25,uM,R3,12:20,,13:55,13:54,13:54,150,600,,1.567,D:igem DTT non transfected/25/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,50,uM,R1,12:20,,13:57,13:56,13:56,150,600,,1.600,D:igem DTT non transfected/50/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,50,uM,R2,12:20,,13:59,13:58,13:58,150,600,,1.633,D:igem DTT non transfected/50/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,100,uM,R1,12:20,,14:03,14:02,14:02,150,600,,1.700,D:igem DTT non transfected/100/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,100,uM,R2,12:20,,14:05,14:04,14:04,150,600,,1.733,D:igem DTT non transfected/100/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,100,uM,R3,12:20,,14:08,14:06,14:06,150,600,,1.767,D:igem DTT non transfected/100/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,200,uM,R1,12:20,,14:09,14:08,14:09,150,600,,1.800,D:igem DTT non transfected/200/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,200,uM,R2,12:20,,14:11,14:09,14:10,150,600,,1.817,D:igem DTT non transfected/200/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_45,2026-10-09,DTT,non_transfected,45min,200,uM,R3,12:20,,14:13,14:12,14:12,150,600,,1.867,D:igem DTT non transfected/200/45',exp_from_section_note;acq_derived_4x
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,0,uM,R1,12:20,,15:09,15:08,15:08,150,600,,2.800,D:igem DTT non transfected/0/2h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,0,uM,R2,12:20,,15:11,15:10,15:10,150,600,,2.833,D:igem DTT non transfected/0/2h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,0,uM,R3,12:20,,15:13,15:12,15:12,150,600,,2.867,D:igem DTT non transfected/0/2h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,10,uM,R1,12:20,,15:15,15:14,15:15,150,600,,2.900,D:igem DTT non transfected/10/2h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,10,uM,R2,12:20,,15:17,15:16,15:16,150,600,,2.933,D:igem DTT non transfected/10/2h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,10,uM,R3,12:20,,15:21,15:20,15:20,150,600,,3.000,D:igem DTT non transfected/10/2h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,25,uM,R1,12:20,,15:25,15:24,15:24,150,600,,3.067,D:igem DTT non transfected/25/2h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,25,uM,R2,12:20,,15:28,15:27,15:27,150,600,,3.117,D:igem DTT non transfected/25/2h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,25,uM,R3,12:20,,15:32,15:30,15:30,150,600,,3.167,D:igem DTT non transfected/25/2h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,50,uM,R1,12:20,,15:40,15:39,15:39,150,600,,3.317,D:igem DTT non transfected/50/2h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,50,uM,R2,12:20,,15:42,15:40,15:41,150,600,,3.333,D:igem DTT non transfected/50/2h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,50,uM,R3,12:20,,15:44,15:43,15:43,150,600,,3.383,D:igem DTT non transfected/50/2h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,100,uM,R1,12:20,,15:34,15:33,15:33,150,600,,3.217,D:igem DTT non transfected/200/2h,exp_from_section_note;acq_derived_4x;images_in_200/2h_folder(files_named_50-2Η);log_authoritative
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,100,uM,R2,12:20,,15:36,15:35,15:35,150,600,,3.250,D:igem DTT non transfected/200/2h,exp_from_section_note;acq_derived_4x;images_in_200/2h_folder(files_named_50-2Η);log_authoritative
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,100,uM,R3,12:20,,15:38,15:37,15:37,150,600,,3.283,D:igem DTT non transfected/200/2h,exp_from_section_note;acq_derived_4x;images_in_200/2h_folder(files_named_50-2Η);log_authoritative
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,200,uM,R1,12:20,,15:46,15:45,15:45,150,600,,3.417,D:igem DTT non transfected/100/2h,exp_from_section_note;acq_derived_4x;images_in_100/2h_folder;log_authoritative
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,200,uM,R2,12:20,,15:48,15:47,15:47,150,600,,3.450,D:igem DTT non transfected/100/2h,exp_from_section_note;acq_derived_4x;images_in_100/2h_folder;log_authoritative
+nt_dtt_0910_2h,2026-10-09,DTT,non_transfected,2h,200,uM,R3,12:20,,15:52,15:50,15:52,150,600,,3.500,D:igem DTT non transfected/100/2h,exp_from_section_note;acq_derived_4x;images_in_100/2h_folder;log_authoritative
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,0,uM,R1,12:20,,16:42,16:40,16:41,150,600,,4.333,D:igem DTT non transfected/0/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,0,uM,R2,12:20,,16:44,16:43,16:43,150,600,,4.383,D:igem DTT non transfected/0/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,0,uM,R3,12:20,,16:46,16:45,16:45,150,600,,4.417,D:igem DTT non transfected/0/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,10,uM,R1,12:20,,16:48,16:46,16:47,150,600,,4.433,D:igem DTT non transfected/10/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,10,uM,R2,12:20,,16:50,16:49,16:49,150,600,,4.483,D:igem DTT non transfected/10/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,10,uM,R3,12:20,,16:52,16:51,16:51,150,600,,4.517,D:igem DTT non transfected/10/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,25,uM,R1,12:20,,16:54,16:53,16:53,150,600,,4.550,D:igem DTT non transfected/25/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,25,uM,R2,12:20,,16:56,16:55,16:56,150,600,,4.583,D:igem DTT non transfected/25/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,25,uM,R3,12:20,,16:59,16:58,16:58,150,600,,4.633,D:igem DTT non transfected/25/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,50,uM,R1,12:20,,17:04,17:02,17:04,150,600,,4.700,D:igem DTT non transfected/50/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,50,uM,R2,12:20,,17:07,17:06,17:06,150,600,,4.767,D:igem DTT non transfected/50/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,50,uM,R3,12:20,,17:10,17:09,17:09,150,600,,4.817,D:igem DTT non transfected/50/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,100,uM,R1,12:20,,17:13,17:12,17:13,150,600,,4.867,D:igem DTT non transfected/100/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,100,uM,R2,12:20,,17:16,17:14,17:14,150,600,,4.900,D:igem DTT non transfected/100/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,100,uM,R3,12:20,,17:18,17:16,17:17,150,600,,4.933,D:igem DTT non transfected/100/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,200,uM,R1,12:20,,17:19,17:18,17:19,150,600,,4.967,D:igem DTT non transfected/200/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,200,uM,R2,12:20,,17:21,17:20,17:20,150,600,,5.000,D:igem DTT non transfected/200/4h,exp_from_section_note;acq_derived_4x
+nt_dtt_0910_4h,2026-10-09,DTT,non_transfected,4h,200,uM,R3,12:20,,17:24,17:23,17:23,150,600,,5.050,D:igem DTT non transfected/200/4h,exp_from_section_note;acq_derived_4x
