@@ -19,6 +19,9 @@ then command, result (numbers), cause (if failed) and next action.
 | Q6 | H2O2 5/10, 0/2h | Second field (01b, ~16:27) is not in the log. | open |
 | Q7 | Medium 8/10 | Two medium images (folder `ΘΡΕΠΤΙΚΌ` and `600/0h/ΘΡΕΠΤΙΚΟ`), one log row. | open |
 | Q8 | NT DTT 9/10, 2h | 100/200 µM folders swapped. | **resolved 2026-10-10**: log is authoritative (order 100 → 50 → 200) |
+| Q9 | Camera | Please image one slide, same field, at Exp 150, 200, 300, 400 and 600, both channels, plus one frame with the shutter closed at each exposure (~5 min). This is the direct linearity test; the data so far cannot provide it. | open |
+| Q10 | Camera | The log lists "Offset 10 / 50". Is that 10 for one channel and 50 for the other (which)? | **answered 2026-10-10**: 10 for preview (pvw), 50 for acquisition (acq), i.e. 50 for every saved image |
+| Q11 | Camera | Does the capture software apply per-channel colour gains or white balance to the fluorescence frames? The red background sits at ~50–60 at every exposure, which the acquisition offset alone does not explain. | open |
 
 ## 2026-10-10 00:44 — Build acquisition log — PASS
 
@@ -112,3 +115,43 @@ then command, result (numbers), cause (if failed) and next action.
   - Focus pass is 28–50 %; focus QC stays in report mode.
 - Housekeeping: `outputs/full_20261010/cells.csv.lock` and `.ichnos-1uftwptc/` are left over from the out-of-memory run at 01:54; safe to delete.
 - Next: step 2, exposure normalisation and camera linearity.
+
+## 2026-10-10 15:24 — Merge the matcher and pipeline fixes — PASS
+
+- PR #7 (`fix/acquisition-match-offset`) and PR #8 (`fix/pipeline-memory-and-speed`) merged into `main`.
+
+## 2026-10-10 15:45 — Step 2: exposure normalisation and linearity check — code ready
+
+- New: `ichnos_image/exposure.py`, `scripts/check_exposure_linearity.py` (2a), `scripts/normalize_exposure.py` (2b), `tests/image/test_exposure.py` (6 tests). Full suite in the cloud workspace: 625 passed, 1 skipped.
+- 2a reads every green and red frame once and fits background = offset + rate × exposure per session and pooled. It is a necessary condition for linearity only: the background is medium autofluorescence plus dark offset, and no field was imaged at several exposures.
+- 2b adds `*_per_s` columns (grey levels per second) to the cells CSV and refuses rows whose two channels have different exposures.
+- Next: run 2a and 2b on the laptop.
+
+## 2026-10-10 15:37 — Step 2a: background vs exposure — PARTIAL
+
+- Tests on the laptop: `test_exposure.py`, 6 passed.
+- Command: `python3 scripts/check_exposure_linearity.py --manifest data/acquisition/manifest/images.csv --out-dir outputs/linearity_20261010`
+- Green background (histogram mode) rises with exposure: pooled fit 13.4 + 18.3 grey/s × t, R² 0.70 over 294 fields; per session R² 0.15–0.58 with intercepts 11–20. Sessions imaged at one exposure fall on the pooled line (non-transfected H2O2 8/10 at 800 ms: 29.4 measured, 28.0 predicted; non-transfected DTT 9/10 at 600 ms: 23.6 vs 24.4; medium 8/10: 26.9 vs 28.0). Exception: medium 5/10 at 1500 ms, 81.9 against 40.8 predicted.
+- Red background does not follow exposure: pooled R² 0.06, per-session slopes from −34 to +21 grey/s, level ~50–60 at any exposure. Red background is dominated by a constant (camera offset), and within a session exposure is confounded with slide and time (e.g. 7/10 used longer exposures on the earlier slides).
+- Reading: consistent with a linear green channel with a dark offset of ~13; nothing can be concluded about the red channel. The direct test is Q9.
+- Update 15:47 (Q10 answered): offset 50 applies to every saved (acq) image, both channels. If that 50 is on the camera's 10-bit scale it is 12.5 on the 8-bit images, which matches the green intercept (13.4). This is a hypothesis, not a measurement. The constant red background (~50–60) is not explained by the offset; one possibility is a colour gain applied to the red plane (Q11).
+- Consequence: background subtraction removes the offset in both channels, so per-second normalisation of green is supported by these data; for red it is assumed, not shown.
+
+## 2026-10-10 15:37 — Step 2b: exposure-normalised cells CSV — PASS
+
+- Command: `python3 scripts/normalize_exposure.py --cells outputs/full_20261010/cells.csv --out outputs/full_20261010/cells_per_s.csv`
+- Result: 90,388 cells with `*_per_s` columns; every row had equal green and red exposures.
+- Median corrected green per second, QC-pass objects (computed in the cloud workspace from the same CSV):
+
+| Session | Objects | Green/s median | Green/s 90th pct | Red/s median | Ratio R/G median | Object area median (px) | ≈ diameter (µm) |
+|---|---|---|---|---|---|---|---|
+| 20261005_h2o2_tr | 3,832 | 2.8 | 7.2 | 8.1 | 2.81 | 143 | 2.3 |
+| 20261006_dtt_tr | 10,982 | 6.5 | 21.4 | 11.9 | 1.78 | 263 | 3.2 |
+| 20261006_h2o2_tr | 1,905 | 3.0 | 8.8 | 10.1 | 3.30 | 244 | 3.1 |
+| 20261007_dtt_tr | 18,164 | 8.1 | 23.5 | 19.1 | 2.08 | 150 | 2.4 |
+| 20261007_h2o2_tr | 10,931 | 7.1 | 18.9 | 15.6 | 2.13 | 117 | 2.1 |
+| 20261008_h2o2_nt | 22,735 | 9.2 | 19.7 | 21.2 | 2.24 | 79 | 1.7 |
+| 20261009_dtt_nt | 19,051 | 8.6 | 27.3 | 19.5 | 2.16 | 99 | 1.9 |
+
+- Finding that changes the plan: the segmented objects are smaller than yeast cells. At 40X with the 0.5X adapter a pixel is 0.1725 µm, so a 4–5 µm cell covers ~420–660 px; the median objects are 79–263 px (1.7–3.2 µm). Segmentation is probably picking up bright parts of cells or debris, most of all in the non-transfected sessions (79–99 px). Per-object means are therefore not comparable between transfected and non-transfected samples, and the higher non-transfected green above should not be read as "reporter below autofluorescence" yet.
+- Next: step 1c, check segmentation against the bright-field before step 3 (autofluorescence).
