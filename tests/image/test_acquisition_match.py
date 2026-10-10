@@ -71,17 +71,18 @@ def test_offset_is_estimated_from_same_folder_pairs(tmp_path):
 def test_images_follow_time_not_folder_name(tmp_path):
     images, rows = _setup(tmp_path)
     report = match(images, rows, estimate_offsets(images, rows))
-    by_path = {r["red_path"]: r for r in report if r["status"] == "matched"}
-    doses = {rows[r["log_index"]]["dose_uM"]: r["red_path"] for r in by_path.values()}
+    matched = [r for r in report if r["status"] == "matched"]
+    doses = {r["log_dose_uM"]: r["red_path"] for r in matched}
+    # The log already names the folder each dose was saved in, so these are same-folder matches.
     assert "/200/2h/" in doses["100"] and "/100/2h/" in doses["200"]
-    assert all(r["folder_agrees"] for r in by_path.values())
+    assert len(matched) == 3
 
 
 def test_unmatched_images_and_rows_are_reported(tmp_path):
     images, rows = _setup(tmp_path)
     report = match(images, rows, estimate_offsets(images, rows))
     statuses = sorted(r["status"] for r in report)
-    assert statuses.count("no_log_row_within_tolerance") == 1
+    assert statuses.count("no_log_row") == 1
     assert next(r for r in report if r["status"] == "log_row_without_image")["log_index"] == 3
 
 
@@ -109,3 +110,31 @@ def test_manifest_is_readable_by_csv(tmp_path):
     write_csv(manifest_rows(images, rows, offsets, objective="40X"), out, MANIFEST_COLUMNS)
     with out.open(encoding="utf-8") as handle:
         assert next(csv.reader(handle)) == MANIFEST_COLUMNS
+
+
+def test_images_saved_in_another_folder_are_matched_and_reported(tmp_path):
+    root = tmp_path / "igem DTT"
+    # 0 uM imaged at 13:06, 10 uM at 13:16, but each saved in the other's folder.
+    _field(root, "0/0", "0-0h", red=(13, 16), green=(13, 16), bf=(13, 17))
+    _field(root, "10/0", "10-0h", red=(13, 6), green=(13, 6), bf=(13, 7))
+    _field(root, "25/0", "25-0h", red=(13, 20), green=(13, 20), bf=(13, 22))
+    rows = [_row("0", "", "13:06", "13:06", "13:10", "D:igem DTT/0/0"),
+            _row("10", "", "13:16", "13:16", "13:17", "D:igem DTT/10/0"),
+            _row("25", "", "13:20", "13:20", "13:22", "D:igem DTT/25/0")]
+    images = scan_root("D", root)
+    report = match(images, rows, estimate_offsets(images, rows))
+    other = {r["image_folder"].split("igem DTT/")[1]: r["log_dose_uM"] for r in report
+             if r["status"] == "matched_other_folder"}
+    assert other == {"0/0": "10", "10/0": "0"}
+
+
+def test_r1_to_r3_are_paired_in_order_despite_minute_drift(tmp_path):
+    root = tmp_path / "igem DTT"
+    # Camera 1.5-2.8 min later than the handwritten minute within this block.
+    for name, minute in (("50-2Η", 41), ("50-2Η ΔΕΞΙΑ", 43), ("50-2Η ΚΑΤΩ", 45)):
+        _field(root, "50/2h", name, red=(15, minute), green=(15, minute), bf=(15, minute + 1))
+    rows = [_row("50", rep, red, red, red, "D:igem DTT/50/2h")
+            for rep, red in (("R1", "15:39"), ("R2", "15:40"), ("R3", "15:43"))]
+    images = scan_root("D", root)
+    report = match(images, rows, {"2026-10-09": float(CAMERA_AHEAD_MIN)})
+    assert sorted(r["log_rep"] for r in report if r["status"] == "matched") == ["R1", "R2", "R3"]

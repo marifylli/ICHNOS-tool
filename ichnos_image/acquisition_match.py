@@ -118,77 +118,127 @@ def _same_folder(image_folder: str, row_folder: str) -> bool:
     return image == row or image.endswith("/" + row)
 
 
-def estimate_offsets(images: list[ImageField], rows: list[dict]) -> dict[str, float]:
-    """Per-day camera-clock offset in minutes (camera minus log), from same-folder pairs."""
-    by_day: dict[str, list[float]] = {}
+def _day(image: ImageField) -> str:
+    return image.red_time.strftime("%Y-%m-%d")
+
+
+def _folder_groups(images: list[ImageField], rows: list[dict]):
+    """Yield (day, image list, [(row index, row)]) per condition folder, both sorted by red time."""
+    keyed: dict[tuple, list[ImageField]] = {}
     for image in images:
-        if image.red_time is None:
+        if image.red_time is not None:
+            keyed.setdefault((_day(image), image.root, _norm_path(image.folder)), []).append(image)
+    for (day, root, folder), group in keyed.items():
+        members = [(k, r) for k, r in enumerate(rows)
+                   if r["date"] == day and r.get("red") and _row_root_and_folder(r)[0] == root
+                   and _same_folder(folder, _row_root_and_folder(r)[1])]
+        yield (day, sorted(group, key=lambda i: i.red_time),
+               sorted(members, key=lambda kr: _log_time(kr[1], "red")))
+
+
+def estimate_offsets(images: list[ImageField], rows: list[dict]) -> dict[str, float]:
+    """Per-day camera-clock offset in minutes (camera minus log).
+
+    Uses folders that hold exactly as many images as the log has rows for
+    them, pairs images and rows in time order (R1, R2, R3 were taken in that
+    order) and takes the median difference per day. Pairing each image with
+    its nearest row instead biases the estimate when fields are ~2 min apart.
+    """
+    by_day: dict[str, list[float]] = {}
+    for day, group, members in _folder_groups(images, rows):
+        if len(group) != len(members) or not members:
             continue
-        day = image.red_time.strftime("%Y-%m-%d")
-        diffs = []
-        for row in rows:
-            root, folder = _row_root_and_folder(row)
-            if row["date"] != day or root != image.root or not _same_folder(image.folder, folder):
-                continue
-            log_red = _log_time(row, "red")
-            if log_red is not None:
-                diffs.append((image.red_time - log_red).total_seconds() / 60)
-        if diffs:
-            # Several rows share a folder (R1-R3); the nearest one is this image's.
-            by_day.setdefault(day, []).append(min(diffs, key=abs))
+        for image, (_, row) in zip(group, members):
+            by_day.setdefault(day, []).append((image.red_time - _log_time(row, "red")).total_seconds() / 60)
     return {day: median(values) for day, values in by_day.items()}
 
 
+def _residual(image: ImageField, row: dict, shift: timedelta) -> float:
+    """Mean absolute red/green time difference in minutes after the clock offset."""
+    d_red = abs((image.red_time - shift - _log_time(row, "red")).total_seconds()) / 60
+    log_green = _log_time(row, "green")
+    if image.green_time is None or log_green is None:
+        return d_red
+    return (d_red + abs((image.green_time - shift - log_green).total_seconds()) / 60) / 2
+
+
 def match(images: list[ImageField], rows: list[dict], offsets: dict[str, float],
-          tolerance_min: float = 2.5) -> list[dict]:
-    """Assign images to log rows day by day; return one report record per image and per unmatched row."""
-    report = []
-    matched_rows: set[int] = set()
-    days = sorted({i.red_time.strftime("%Y-%m-%d") for i in images if i.red_time} | {r["date"] for r in rows})
-    for day in days:
-        day_images = [i for i in images if i.red_time and i.red_time.strftime("%Y-%m-%d") == day]
-        day_rows = [(k, r) for k, r in enumerate(rows) if r["date"] == day and r.get("red")]
-        if not day_images or not day_rows or day not in offsets:
+          tolerance_min: float = 2.5, same_folder_tolerance_min: float = 5.0) -> list[dict]:
+    """Assign images to log rows; return one report record per image and per unmatched row.
+
+    Stage 1, same folder: a folder with as many images as log rows is paired
+    in time order; otherwise images and rows of that folder are assigned by
+    minimum time difference. Pairs within ``same_folder_tolerance_min`` are
+    accepted. Handwritten log times are only to the minute and drift by a
+    minute or two within a block, which is why this tolerance is looser.
+
+    Stage 2, any folder: images and rows still unmatched are assigned across
+    folders of the same day and root within the tighter ``tolerance_min``.
+    These are images saved in a folder other than the one the log names, and
+    are reported as ``matched_other_folder``.
+    """
+    matched: dict[int, tuple[int, dict, float, str]] = {}  # id(image) -> (row index, row, residual, status)
+    used_rows: set[int] = set()
+    big = 1e6
+
+    for day, group, members in _folder_groups(images, rows):
+        if day not in offsets or not members:
             continue
         shift = timedelta(minutes=offsets[day])
-        big = 1e6
-        cost = np.full((len(day_images), len(day_rows)), big)
-        for a, image in enumerate(day_images):
-            for b, (_, row) in enumerate(day_rows):
-                if _row_root_and_folder(row)[0] != image.root:
-                    continue
-                d_red = abs((image.red_time - shift - _log_time(row, "red")).total_seconds()) / 60
-                log_green = _log_time(row, "green")
-                d_green = d_red if image.green_time is None or log_green is None else \
-                    abs((image.green_time - shift - log_green).total_seconds()) / 60
-                if max(d_red, d_green) <= tolerance_min:
-                    cost[a, b] = d_red + d_green
+        if len(group) == len(members):
+            pairs = list(zip(group, members))
+        else:
+            cost = np.array([[_residual(i, r, shift) for _, r in members] for i in group])
+            a_idx, b_idx = linear_sum_assignment(cost)
+            pairs = [(group[a], members[b]) for a, b in zip(a_idx, b_idx)]
+        for image, (index, row) in pairs:
+            residual = _residual(image, row, shift)
+            if residual <= same_folder_tolerance_min:
+                matched[id(image)] = (index, row, residual, "matched")
+                used_rows.add(index)
+
+    for day in sorted(offsets):
+        shift = timedelta(minutes=offsets[day])
+        left_images = [i for i in images if i.red_time and _day(i) == day and id(i) not in matched]
+        left_rows = [(k, r) for k, r in enumerate(rows) if r["date"] == day and r.get("red") and k not in used_rows]
+        if not left_images or not left_rows:
+            continue
+        cost = np.full((len(left_images), len(left_rows)), big)
+        for a, image in enumerate(left_images):
+            for b, (_, row) in enumerate(left_rows):
+                if _row_root_and_folder(row)[0] == image.root:
+                    residual = _residual(image, row, shift)
+                    if residual <= tolerance_min:
+                        cost[a, b] = residual
         for a, b in zip(*linear_sum_assignment(cost)):
-            if cost[a, b] >= big:
-                continue
-            index, row = day_rows[b]
-            image = day_images[a]
-            matched_rows.add(index)
-            image.__dict__["_match"] = (index, row, cost[a, b] / 2)
+            if cost[a, b] < big:
+                index, row = left_rows[b]
+                matched[id(left_images[a])] = (index, row, cost[a, b], "matched_other_folder")
+                used_rows.add(index)
+
+    report = []
     for image in images:
         record = {"root": image.root, "image_folder": image.folder, "red_path": str(image.red_path),
-                      "green_path": str(image.green_path),
-                      "camera_red_time": "" if image.red_time is None else image.red_time.isoformat(sep=" ")}
-        found = image.__dict__.get("_match")
+                  "green_path": str(image.green_path),
+                  "camera_red_time": "" if image.red_time is None else image.red_time.isoformat(sep=" ")}
+        found = matched.get(id(image))
         if image.red_time is None:
-            record.update(status="no_timestamp")
+            record["status"] = "no_timestamp"
         elif found is None:
-            record.update(status="no_log_row_within_tolerance")
+            record["status"] = "no_log_row"
         else:
-            index, row, residual = found
-            _, row_folder = _row_root_and_folder(row)
-            record.update(status="matched", log_index=index, residual_min=f"{residual:.2f}",
-                          folder_agrees=_same_folder(image.folder, row_folder))
+            index, row, residual, status = found
+            record.update(status=status, log_index=index, residual_min=f"{residual:.2f}",
+                          log_dose_uM=row.get("dose_uM", ""), log_tp=row.get("tp_label", ""),
+                          log_rep=row.get("rep", ""), log_folder=_row_root_and_folder(row)[1])
+            image.__dict__["_match"] = (index, row, residual)
         report.append(record)
     for index, row in enumerate(rows):
-        if index not in matched_rows and row.get("red"):
-            report.append({"status": "log_row_without_image", "log_index": index, "root": _row_root_and_folder(row)[0],
-                               "image_folder": _row_root_and_folder(row)[1]})
+        if index not in used_rows and row.get("red"):
+            root, folder = _row_root_and_folder(row)
+            report.append({"status": "log_row_without_image", "log_index": index, "root": root,
+                           "log_folder": folder, "log_dose_uM": row.get("dose_uM", ""),
+                           "log_tp": row.get("tp_label", ""), "log_rep": row.get("rep", "")})
     return report
 
 

@@ -44,7 +44,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="image folder for a folder code of the log (A, B, C, D); repeat")
     ap.add_argument("--objective", required=True, choices=sorted(OBJECTIVES),
                     help="objective used for fluorescence; not recorded in the log, so it must be stated")
-    ap.add_argument("--tolerance-min", type=float, default=2.5)
+    ap.add_argument("--tolerance-min", type=float, default=2.5,
+                    help="max time difference for an image matched to a row of another folder")
+    ap.add_argument("--same-folder-tolerance-min", type=float, default=5.0,
+                    help="max time difference for an image matched to a row of its own folder")
     ap.add_argument("--out-dir", type=Path, required=True)
     args = ap.parse_args(argv)
 
@@ -63,23 +66,26 @@ def main(argv: list[str] | None = None) -> int:
         images.extend(found)
 
     offsets = estimate_offsets(images, rows)
-    report = match(images, rows, offsets, tolerance_min=args.tolerance_min)
+    report = match(images, rows, offsets, tolerance_min=args.tolerance_min,
+                   same_folder_tolerance_min=args.same_folder_tolerance_min)
     manifest = manifest_rows(images, rows, offsets, objective=args.objective)
 
     args.out_dir.mkdir(parents=True)
     write_csv(manifest, args.out_dir / "images.csv", MANIFEST_COLUMNS)
     write_csv(report, args.out_dir / "match_report.csv",
-              ["status", "root", "image_folder", "log_index", "residual_min", "folder_agrees",
-               "camera_red_time", "red_path", "green_path"])
+              ["status", "root", "image_folder", "log_folder", "log_dose_uM", "log_tp", "log_rep",
+               "log_index", "residual_min", "camera_red_time", "red_path", "green_path"])
     write_csv([{"date": d, "offset_min": f"{o:.2f}"} for d, o in sorted(offsets.items())],
               args.out_dir / "offsets.csv", ["date", "offset_min"])
 
     for day, offset in sorted(offsets.items()):
         print(f"clock offset {day}: {offset:+.1f} min")
     counts = Counter(r["status"] for r in report)
-    disagree = sum(1 for r in report if r.get("folder_agrees") is False)
     print(dict(counts))
-    print(f"matched images whose folder disagrees with their log row: {disagree}")
+    for r in report:
+        if r["status"] == "matched_other_folder":
+            print(f"  saved in {r['image_folder']} but taken at the time of "
+                  f"{r['log_dose_uM']} uM {r['log_tp']} {r['log_rep']} (log folder {r['log_folder']})")
     print(f"{len(manifest)} manifest rows -> {args.out_dir / 'images.csv'}")
     return 0
 
