@@ -109,9 +109,18 @@ def extract_per_cell(
         saturation_value = float(np.iinfo(raw_green.dtype).max)
 
     features = []
+    # Every morphological step below reaches at most erosion_px + annulus_width_px
+    # pixels from the cell, so work in the cell's bounding box padded by that much.
+    # Running erosion/dilation on the full frame for each cell made extraction
+    # take ~70 s per 2048x1536 field; the cropped version gives identical values.
+    pad = erosion_px + annulus_width_px + 1
+    height, width = label_mask.shape
     for region in regionprops(label_mask):
         cell_id = int(region.label)
-        mask = label_mask == cell_id
+        r0, c0, r1, c1 = region.bbox
+        box = (slice(max(r0 - pad, 0), min(r1 + pad, height)), slice(max(c0 - pad, 0), min(c1 + pad, width)))
+        labels_box = label_mask[box]
+        mask = labels_box == cell_id
 
         measure_mask = (
             erosion(mask, disk(erosion_px), mode="ignore")
@@ -121,8 +130,8 @@ def extract_per_cell(
         if not measure_mask.any():
             measure_mask = mask  # too small to erode -- fall back to the full cell
 
-        raw_g, raw_r = raw_green[measure_mask], raw_red[measure_mask]
-        corr_g, corr_r = corrected_green[measure_mask], corrected_red[measure_mask]
+        raw_g, raw_r = raw_green[box][measure_mask], raw_red[box][measure_mask]
+        corr_g, corr_r = corrected_green[box][measure_mask], corrected_red[box][measure_mask]
 
         local_bg_g = local_bg_r = 0.0
         if subtract_local_background:
@@ -136,21 +145,21 @@ def extract_per_cell(
                 disk(erosion_px),
                 mode="ignore",
             )
-            annulus = outer & ~inner & (label_mask == 0)  # exclude other cells' territory too
+            annulus = outer & ~inner & (labels_box == 0)  # exclude other cells' territory too
             if annulus.any():
-                local_bg_g = float(np.median(corrected_green[annulus]))
-                local_bg_r = float(np.median(corrected_red[annulus]))
+                local_bg_g = float(np.median(corrected_green[box][annulus]))
+                local_bg_r = float(np.median(corrected_red[box][annulus]))
                 corr_g = np.clip(corr_g - local_bg_g, 0, None)
                 corr_r = np.clip(corr_r - local_bg_r, 0, None)
 
 
 
         if raw_saturation_mask is not None:
-            sat = bool(raw_saturation_mask[mask].any())
+            sat = bool(raw_saturation_mask[box][mask].any())
         else:
             sat = bool(
-                (raw_green[mask] >= saturation_value).any()
-                or (raw_red[mask] >= saturation_value).any()
+                (raw_green[box][mask] >= saturation_value).any()
+                or (raw_red[box][mask] >= saturation_value).any()
             )
         features.append(
             CellFeatures(
@@ -166,7 +175,7 @@ def extract_per_cell(
                 sat_flag=sat,
                 local_background_green=local_bg_g,
                 local_background_red=local_bg_r,
-                sat_flag_legacy=(bool(legacy_saturation_mask[mask].any())
+                sat_flag_legacy=(bool(legacy_saturation_mask[box][mask].any())
                                  if legacy_saturation_mask is not None else sat),
             )
         )
