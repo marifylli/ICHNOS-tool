@@ -22,6 +22,7 @@ then command, result (numbers), cause (if failed) and next action.
 | Q9 | Camera | Please image one slide, same field, at Exp 150, 200, 300, 400 and 600, both channels, plus one frame with the shutter closed at each exposure (~5 min). This is the direct linearity test; the data so far cannot provide it. | open |
 | Q10 | Camera | The log lists "Offset 10 / 50". Is that 10 for one channel and 50 for the other (which)? | **answered 2026-10-10**: 10 for preview (pvw), 50 for acquisition (acq), i.e. 50 for every saved image |
 | Q11 | Camera | Does the capture software apply per-channel colour gains or white balance to the fluorescence frames? The red background sits at ~50–60 at every exposure, which the acquisition offset alone does not explain. | open |
+| Q12 | Segmentation | Mark the centre of every cell (Fiji multi-point) on 7 bright-field crops, one per session (the 9/10 crop includes an air bubble), so masks can be scored. | open |
 
 ## 2026-10-10 00:44 — Build acquisition log — PASS
 
@@ -155,3 +156,39 @@ then command, result (numbers), cause (if failed) and next action.
 
 - Finding that changes the plan: the segmented objects are smaller than yeast cells. At 40X with the 0.5X adapter a pixel is 0.1725 µm, so a 4–5 µm cell covers ~420–660 px; the median objects are 79–263 px (1.7–3.2 µm). Segmentation is probably picking up bright parts of cells or debris, most of all in the non-transfected sessions (79–99 px). Per-object means are therefore not comparable between transfected and non-transfected samples, and the higher non-transfected green above should not be read as "reporter below autofluorescence" yet.
 - Next: step 1c, check segmentation against the bright-field before step 3 (autofluorescence).
+
+## 2026-10-11 14:50 — Step 1c: masks against the bright-field — FAIL (diagnosis)
+
+- Method: one field per session (the one with the median object count), masks recomputed with the same call as the full run (`segment_cells(green + red, method="sparse")`) and drawn on the bright-field frame and on green + red. Bright-field and fluorescence show the same field without visible shift.
+- Area of all 90,388 objects of the full run, per session:
+
+| Session | Objects | Area median (px) | < 100 px | ≥ 420 px (cell-sized) |
+|---|---|---|---|---|
+| 20261005_h2o2_tr | 3,945 | 147 | 39 % | 21 % |
+| 20261006_dtt_tr | 11,647 | 273 | 24 % | 33 % |
+| 20261006_h2o2_tr | 1,981 | 249 | 30 % | 33 % |
+| 20261007_dtt_tr | 18,886 | 154 | 38 % | 21 % |
+| 20261007_h2o2_tr | 11,167 | 118 | 43 % | 15 % |
+| 20261008_h2o2_nt | 23,284 | 80 | 60 % | 5 % |
+| 20261009_dtt_nt | 19,478 | 100 | 50 % | 10 % |
+
+- What the overlays show:
+  - Transfected: fluorescent cells are masked whole and in place, but many objects are background noise, and the watershed often cuts one cell in two. Many cells visible in the bright-field are not fluorescent and get no mask.
+  - Non-transfected: almost no cell fluoresces, so the masks are mostly background noise and the camera's diagonal stripes. The non-transfected per-object values are not cell measurements.
+- Causes:
+  1. Masks come from the fluorescence itself, so a cell is found only if it is bright. This cannot work for non-transfected cells and biases transfected samples toward bright cells. Step 3 (autofluorescence from non-transfected cells) needs masks from the bright-field.
+  2. Pixel-based settings do not fit 40X (0.1725 µm/px): `min_size` 30 px (≈ 0.9 µm²) lets noise through; the watershed's `min_distance` 5 px (0.9 µm) splits cells of 4–5 µm.
+- Consequence: the step 2b table (per-object values, transfected vs non-transfected) is withdrawn until masks are fixed.
+- Next: masks from the bright-field.
+
+## 2026-10-11 14:58 — Merge step 2 — PASS
+
+- PR #9 (`feat/exposure-normalization`) merged into `main` (`0faba66`). Step 1c starts on branch `feat/brightfield-segmentation`, reset onto that commit (an empty branch of the same name, left at `f8565fa`, was moved with `git checkout -B`).
+
+## 2026-10-11 15:03 — Step 1c: bright-field masks, first trials — PARTIAL
+
+- `method="transmitted"` (existing; thresholds local texture): finds nearly every cell including non-fluorescent ones, but masks include the bright halo (too wide), merge touching cells, cut some cells with straight lines and leave fragments of 3–6 px.
+- New trial, "dark rim" (not yet in the repository): flatten the illumination, keep pixels darker than background by k × noise, close, fill holes, open, split touching cells with h-maxima of the distance transform, keep objects by area (µm²) and solidity. On the transfected 7/10 field the masks are cell-sized and tight; on non-transfected 8/10 most cells are found; non-transfected 9/10 has an air bubble whose shadow is masked as cells, and its small dark cells are partly missed.
+- Results move with each parameter in ways that cannot be judged by eye on a few crops (e.g. a smaller opening merged cells that the solidity filter then dropped). Parameters need a reference: fields whose cells have been marked by hand.
+- Crops for marking and instructions: `data/segmentation_reference/` (7 crops of 700 × 700 px from the centre of the fields above; `crops.csv` gives their position in the full frame).
+- Next: point annotation of cells on those crops (Q12), then implement the method with settings in µm and measure recall and precision against the annotation.
