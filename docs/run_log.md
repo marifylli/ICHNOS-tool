@@ -192,3 +192,17 @@ then command, result (numbers), cause (if failed) and next action.
 - Results move with each parameter in ways that cannot be judged by eye on a few crops (e.g. a smaller opening merged cells that the solidity filter then dropped). Parameters need a reference: fields whose cells have been marked by hand.
 - Crops for marking and instructions: `data/segmentation_reference/` (7 crops of 700 × 700 px from the centre of the fields above; `crops.csv` gives their position in the full frame).
 - Next: point annotation of cells on those crops (Q12), then implement the method with settings in µm and measure recall and precision against the annotation.
+
+## 2026-10-11 15:49 — Step 1c: bright-field method and scorer — code ready
+
+- New method `segment_cells(..., method="brightfield_rim", pixel_size_um=...)` in `ichnos_image/segment.py`: the dark-rim trial of 15:03 made into code, with every size in µm. Two changes from the trial: a quadratic is subtracted before the Gaussian illumination step (on a frame with only an illumination gradient the trial returned one false 71 µm² object at the frame edge), and the despeckle and split-smoothing widths are in µm (with them in pixels, the same scene sampled twice as finely split one cell in two). At 40X the settings are numerically those of the trial.
+- `run_pipeline.py --segmentation-method brightfield_rim` (with `--segmentation-source brightfield`) takes the pixel size from each row's objective.
+- New scorer: `ichnos_image/segmentation_score.py` and `scripts/score_segmentation.py`. Segments the whole frame, scores inside each crop's window against the hand-marked points: recall (cells alone in their own mask / marked cells), precision (masks with exactly one point / masks scored), merged and false masks; masks whose whole-mask centroid is outside the crop are not scored. Optional overlays per crop.
+- Tests: `test_brightfield_rim.py` (15) and `test_segmentation_score.py` (7). Full suite in the cloud workspace: 647 passed, 1 skipped. Smoke run of the scorer on the 7/10 crop with 3 test points: runs, overlay correct.
+- Defaults are still the values set by eye; nothing is calibrated until the points of Q12 arrive.
+- Next: on the laptop, run the tests; when the points arrive, score the current masks (`sparse` on green + red, the baseline) and `brightfield_rim`, then tune on 4 crops and check on the other 3.
+
+## 2026-10-11 16:10 — Step 1c: tests on the laptop — PASS
+
+- Command: `python3 -m pytest tests/image/test_brightfield_rim.py tests/image/test_segmentation_score.py -q`
+- Result: 22 passed. 7 `DeprecationWarning`s come from inside scikit-image (`grayreconstruct.py`, used by `h_maxima`) under NumPy 2.5, not from project code; no action.

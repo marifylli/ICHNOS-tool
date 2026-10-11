@@ -101,6 +101,10 @@ def segment_cells(
         return _segment_sparse(bf_image, min_size=min_size, **cellpose_kwargs)
     if method == "transmitted":
         return _segment_transmitted(bf_image, min_size=min_size, **cellpose_kwargs)
+    if method == "brightfield_rim":
+        # Sizes come from pixel_size_um and the *_um settings; min_size (pixels)
+        # does not apply, so a pixel-based default cannot leak into a µm method.
+        return _segment_brightfield_rim(bf_image, **cellpose_kwargs)
     raise ValueError(f"unknown segmentation method: {method!r}")
 
 
@@ -155,6 +159,121 @@ def _segment_transmitted(
     binary = _remove_objects_below_size(binary, min_size)
     binary = _erode_keeping_objects(binary, erosion_px)
     return _split_touching(binary)
+
+
+def _disk_px(radius_um: float, pixel_size_um: float) -> int:
+    return max(round(radius_um / pixel_size_um), 0)
+
+
+def _quadratic_surface(image: np.ndarray, step: int = 8) -> np.ndarray:
+    """Least-squares quadratic in (row, column), fitted on a coarse grid."""
+    rows, cols = np.mgrid[0:image.shape[0]:step, 0:image.shape[1]:step]
+    r, c = rows.ravel() / image.shape[0], cols.ravel() / image.shape[1]
+    design = np.column_stack([np.ones_like(r), r, c, r * r, r * c, c * c])
+    coef, *_ = np.linalg.lstsq(design, image[::step, ::step].ravel(), rcond=None)
+    rr, cc = np.mgrid[0:image.shape[0], 0:image.shape[1]]
+    rr, cc = rr / image.shape[0], cc / image.shape[1]
+    return coef[0] + coef[1] * rr + coef[2] * cc + coef[3] * rr * rr + coef[4] * rr * cc + coef[5] * cc * cc
+
+
+def _segment_brightfield_rim(
+    image: np.ndarray,
+    *,
+    pixel_size_um: float,
+    rim_sigmas: float = 3.0,
+    illumination_sigma_um: float = 10.0,
+    smoothing_sigma_um: float = 0.17,
+    closing_um: float = 0.35,
+    opening_um: float = 0.7,
+    split_depth_um: float = 0.35,
+    min_area_um2: float = 4.0,
+    max_area_um2: float = 80.0,
+    min_solidity: float = 0.8,
+) -> np.ndarray:
+    """Segment yeast in a bright-field frame by the dark rim of each cell.
+
+    In this setup's bright-field (40X, 0.1725 µm/px) every yeast cell has a
+    dark rim, whatever its interior looks like: grey and textured in the
+    transfected sessions, bright in the non-transfected 8/10 one. The halo
+    outside the rim is bright. "transmitted" thresholds texture, which the
+    halo has too, so its masks come out wider than the cells; thresholding
+    darkness keeps the rim and drops the halo.
+
+    Steps: subtract the slow illumination (a quadratic over the frame, then a
+    Gaussian of illumination_sigma_um),
+    keep pixels darker than the median by rim_sigmas x the MAD noise, close
+    small gaps in the rim (closing_um), fill the enclosed interior, open
+    (opening_um) to drop rims that did not close and thin debris, split
+    touching cells at the h-maxima of the distance transform (split_depth_um:
+    a neck must be at least this much narrower than the cells on both sides
+    to split), then keep objects whose area lies in [min_area_um2,
+    max_area_um2] and whose solidity is at least min_solidity.
+
+    Every size is in micrometres and converted with pixel_size_um, so the
+    method means the same thing at another objective. The defaults are a
+    starting point set by eye on one field per session (run_log 2026-10-11);
+    they are not calibrated until scored against hand-marked cells
+    (scripts/score_segmentation.py, data/segmentation_reference/).
+
+    Known failure: a dark, compact artefact (the shadow of an air bubble in
+    the 9/10 non-transfected session) passes as cells.
+    """
+    if image.ndim != 2:
+        raise ValueError("image must be 2D")
+    if not np.isfinite(pixel_size_um) or pixel_size_um <= 0:
+        raise ValueError("pixel_size_um must be a positive number")
+    if rim_sigmas <= 0 or illumination_sigma_um <= 0 or min_area_um2 <= 0:
+        raise ValueError("rim_sigmas, illumination_sigma_um and min_area_um2 must be positive")
+    if max_area_um2 <= min_area_um2 or not 0 <= min_solidity <= 1:
+        raise ValueError("need max_area_um2 > min_area_um2 and 0 <= min_solidity <= 1")
+    data = np.asarray(image, dtype=float)
+    if not np.isfinite(data).all():
+        raise ValueError("image must be finite")
+
+    # The quadratic removes the frame-wide gradient first, so the Gaussian
+    # below, which handles the patchy part of the illumination, does not
+    # leave a dark band along the edge where it runs out of frame.
+    flat = data - _quadratic_surface(data)
+    flat = flat - filters.gaussian(flat, sigma=illumination_sigma_um / pixel_size_um)
+    # Despeckle over ~0.5 µm (3 px at 40X), then smooth: both in µm, like
+    # every other size here, so a finer pixel does not change the answer.
+    median_px = max(3, 2 * round(0.25 / pixel_size_um) + 1)
+    smoothing_px = smoothing_sigma_um / pixel_size_um
+    smoothed = ndi.median_filter(flat, size=median_px)
+    if smoothing_px > 0:
+        smoothed = filters.gaussian(smoothed, sigma=smoothing_px)
+    middle = float(np.median(smoothed))
+    noise = 1.4826 * float(np.median(np.abs(smoothed - middle)))
+    if noise == 0:
+        return np.zeros(data.shape, dtype=np.int32)
+
+    binary = smoothed < middle - rim_sigmas * noise
+    closing_px = _disk_px(closing_um, pixel_size_um)
+    if closing_px:
+        binary = ndi.binary_closing(binary, morphology.disk(closing_px))
+    binary = ndi.binary_fill_holes(binary)
+    opening_px = _disk_px(opening_um, pixel_size_um)
+    if opening_px:
+        binary = morphology.opening(binary, morphology.disk(opening_px))
+
+    distance = ndi.distance_transform_edt(binary)
+    depth_px = split_depth_um / pixel_size_um
+    if depth_px > 0:
+        ridge = ndi.gaussian_filter(distance, max(smoothing_px, 1.0))
+        markers = ndi.label(morphology.h_maxima(ridge, depth_px))[0]
+    else:
+        markers = ndi.label(binary)[0]
+    labels = segmentation.watershed(-distance, markers, mask=binary)
+
+    pixel_area = pixel_size_um ** 2
+    out = np.zeros(labels.shape, dtype=np.int32)
+    next_id = 0
+    for region in measure.regionprops(labels):
+        area_um2 = region.area * pixel_area
+        if min_area_um2 <= area_um2 <= max_area_um2 and region.solidity >= min_solidity:
+            next_id += 1
+            out[region.slice][region.image] = next_id
+    return out
 
 
 def _local_std(image: np.ndarray, window: int) -> np.ndarray:

@@ -74,10 +74,12 @@ def main():
     )
     parser.add_argument("--out", required=True, type=Path, help="output combined CSV path")
     parser.add_argument("--segmentation-method", default="otsu",
-                        choices=["otsu", "sparse", "transmitted", "cellpose"],
+                        choices=["otsu", "sparse", "transmitted", "brightfield_rim", "cellpose"],
                         help="'sparse' for fluorescence frames where cells are a few percent of "
                              "the pixels; 'transmitted' for bright-field, where cells are dark "
-                             "rims with bright halos rather than bright objects")
+                             "rims with bright halos rather than bright objects; 'brightfield_rim' "
+                             "for bright-field too, masking each cell inside its dark rim and "
+                             "leaving the halo out (sizes in µm, scale from the row's objective)")
     parser.add_argument(
         "--cellpose-gpu", action="store_true",
         help="use GPU for cellpose (--segmentation-method cellpose only)",
