@@ -188,3 +188,78 @@ def test_existing_outputs_are_not_overwritten(tmp_path):
     )
     assert done.returncode != 0 and "already exists" in done.stderr
     assert (tmp_path / "aligned.csv").read_text() == "keep me"
+
+
+def build_timepoint(root: Path):
+    """The team's layout: one timepoint folder, a sub-folder per field, and
+    the fields' bright-field frames together in the timepoint folder with
+    names that do not say which field each belongs to."""
+    t = root / "75" / "2h"
+    rows = []
+    for k, (field, frame) in enumerate((("75-2h", "Image000 b.tif"), ("75-2h right", "Image000.tif"))):
+        cells = scattered(seed=100 + k)
+        lit = np.roll(np.roll(cells, 3, axis=0), -2, axis=1)
+        folder = t / field / "01a"
+        folder.mkdir(parents=True)
+        def save(array, path):
+            Image.fromarray(np.clip(array, 0, 255).astype(np.uint8)).save(path)
+            return str(path.relative_to(root))
+        green = save(fluorescence_of(lit, seed=k), folder / f"{field} [01a][Alexa 488].tif")
+        red = save(fluorescence_of(lit, seed=k + 9, amplitude=95), folder / f"{field} [01a][Alexa 594].tif")
+        save(brightfield_of(cells, seed=k), t / frame)
+        rows.append(dict(
+            session_id="s", timepoint=k, acquisition_order=k, sample_id=field,
+            green_path=green, red_path=red,
+            # what a name-based pick would do: the same, wrong frame for both
+            bright_field_path=str((t / "Image000.tif").relative_to(root)),
+            exposure_ms_green=100.0, exposure_ms_red=100.0, nd_filter_green=0.0,
+            nd_filter_red=0.0, objective="60X", burner_hours=5.0, lamp_warmup_minutes=30.0))
+    for k in range(4):  # unrelated fields, so the null has something to draw on
+        cells = scattered(seed=200 + k)
+        folder = root / "other" / f"f{k}" / "01a"
+        folder.mkdir(parents=True)
+        for name, image in (("[01a][Alexa 488].tif", fluorescence_of(cells, seed=k)),
+                            ("[01a][Alexa 594].tif", fluorescence_of(cells, seed=k + 9, amplitude=95))):
+            Image.fromarray(np.clip(image, 0, 255).astype(np.uint8)).save(folder / name)
+        Image.fromarray(np.clip(brightfield_of(cells, seed=k), 0, 255).astype(np.uint8)).save(
+            folder.parent / "Image000.tif")
+        rows.append(dict(
+            session_id="s", timepoint=10 + k, acquisition_order=10 + k, sample_id=f"other{k}",
+            green_path=str((folder / "[01a][Alexa 488].tif").relative_to(root)),
+            red_path=str((folder / "[01a][Alexa 594].tif").relative_to(root)),
+            bright_field_path=str((folder.parent / "Image000.tif").relative_to(root)),
+            exposure_ms_green=100.0, exposure_ms_red=100.0, nd_filter_green=0.0,
+            nd_filter_red=0.0, objective="60X", burner_hours=5.0, lamp_warmup_minutes=30.0))
+    path = root / "images.csv"
+    pd.DataFrame(rows).to_csv(path, index=False)
+    return path
+
+
+def run_align(manifest, out, *extra):
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), "--manifest", str(manifest), "--out", str(out),
+         "--min-size", "80", *extra],
+        capture_output=True, text=True, check=False,
+    )
+
+
+def test_one_frame_is_not_given_to_two_fields(tmp_path):
+    """Both rows name the same frame; it belongs to one of them, and the
+    other must be left without a bright-field rather than share it."""
+    manifest = build_timepoint(tmp_path)
+    done = run_align(manifest, tmp_path / "aligned.csv")
+    assert done.returncode == 0, done.stderr
+    aligned = pd.read_csv(tmp_path / "aligned.csv").set_index("row")
+    assert aligned.loc[1, "brightfield"].endswith("Image000.tif")
+    assert pd.isna(aligned.loc[0, "brightfield"]) or aligned.loc[0, "brightfield"] == ""
+
+
+def test_searching_the_timepoint_folder_gives_each_field_its_own_frame(tmp_path):
+    manifest = build_timepoint(tmp_path)
+    done = run_align(manifest, tmp_path / "aligned.csv", "--search-up", "2")
+    assert done.returncode == 0, done.stderr
+    aligned = pd.read_csv(tmp_path / "aligned.csv").set_index("row")
+    assert aligned.loc[0, "brightfield"].endswith("Image000 b.tif")
+    assert aligned.loc[1, "brightfield"].endswith("Image000.tif")
+    assert (aligned.loc[[0, 1], "n_candidates"] == 2).all()
+    assert (aligned.loc[[0, 1], "z_matched"] > aligned.loc[[0, 1], "z_runner_up"]).all()

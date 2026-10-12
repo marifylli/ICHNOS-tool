@@ -223,3 +223,10 @@ then command, result (numbers), cause (if failed) and next action.
 - Cause, checked against the folder listings: every timepoint folder holds one bright-field frame per field, named by position (`Image000 ΔΕΞΙΑ.tif` for field `…ΔΕΞΙΑ`), but the names do not match reliably (`dejia` vs `δεξια`, `ΠΑΝΨΩ` vs `ΠΑΝΩ`, `κατγω` vs `κατω`, `ΚΑΤΩ` vs `ΚΑΤΟΥ`, `αριστερα` vs `αρ`, `Image000333.tif`), so the manifest builder's name-based pick gave 16 frames to two fields each and others the wrong frame. The alignment rejected the wrong ones correctly, except one: `nt_dtt_0910_0h_200uM_R2` passed at z 8.9 (just above 7.4) with a 112 px shift on a frame that belongs to `…_R1` (z 24.9, 3 px). A frame cannot belong to two fields.
 - Fix (`scripts/align_brightfield.py`): `--search-up 2` tries every `Image*.tif` of the timepoint folder for every field of it, and frames are assigned one-to-one so that the summed z is largest (Hungarian assignment); this one-to-one rule also applies without `--search-up`. New columns `z_runner_up` (best z among the frames not chosen) and `z_best_candidate`. Tests: 8 passed (2 new). Dry run on the two worst folders (7/10 DTT `25/2h`, 9/10 DTT nt `0/4h`): all 6 fields get their own frame, z 19–33 against runner-up 4–6, shifts 4–13 px.
 - Next: full run 2 with `--search-up 2`.
+
+## 2026-10-12 16:39 — Step 1d: alignment, full run 2 — FAIL (code not in place)
+
+- Command (with `--search-up 2`) stopped at once: `unrecognized arguments: --search-up 2`.
+- Cause: the corrected `align_brightfield.py` and its tests never reached the laptop on 2026-10-11 18:41. The copy step reported success but wrote the previous version again (same file name as the earlier delivery; the file's md5 on the laptop was that of the older version). Commit `8d9fbd2` therefore holds the older code under a message that describes the fix; its run_log entry is correct.
+- Fix: delivered again under a new name and checked on the laptop by md5 and by `--search-up` being present before reporting. From now on every delivery is checked on the laptop this way.
+- Next: tests, then run 2 again.
