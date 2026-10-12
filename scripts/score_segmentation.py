@@ -7,6 +7,9 @@
     # a different setting
     python3 scripts/score_segmentation.py ... --param rim_sigmas=2.5 --param opening_um=0.5
 
+    # Cellpose (needs `pip install cellpose`; downloads its model on first use)
+    python3 scripts/score_segmentation.py ... --method cellpose --cellpose-gpu
+
     # the masks the full run of 2026-10-10 used, as the baseline
     python3 scripts/score_segmentation.py ... --method sparse --source sum \\
         --manifest data/acquisition/manifest/images.csv
@@ -89,7 +92,8 @@ def overlay(crop_png: Path, labels: np.ndarray, window, detail: dict, out: Path)
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--reference", type=Path, required=True, help="folder with crops.csv and the points files")
-    ap.add_argument("--method", required=True, choices=["brightfield_rim", "transmitted", "sparse", "otsu"])
+    ap.add_argument("--method", required=True, choices=["brightfield_rim", "transmitted", "sparse", "otsu", "cellpose"])
+    ap.add_argument("--cellpose-gpu", action="store_true", help="--method cellpose: use the GPU (CUDA, or Apple MPS)")
     ap.add_argument("--source", default="brightfield", choices=["brightfield", "sum"])
     ap.add_argument("--manifest", type=Path, help="images.csv; needed for --source sum")
     ap.add_argument("--param", action="append", type=parse_param, default=[],
@@ -105,6 +109,9 @@ def main(argv: list[str] | None = None) -> int:
     crops = pd.read_csv(args.reference / "crops.csv", dtype=str)
     manifest = pd.read_csv(args.manifest, dtype=str) if args.manifest else None
     params = dict(args.param)
+    if args.method == "cellpose":
+        # Load once: the model is ~1.1 GB and would otherwise be read per crop.
+        params["cellpose_model"] = segment.load_cellpose_model(gpu=args.cellpose_gpu)
 
     rows, skipped = [], []
     for _, crop in crops.iterrows():
@@ -147,7 +154,8 @@ def main(argv: list[str] | None = None) -> int:
     with args.out.open("x", newline="") as handle:
         table.to_csv(handle, index=False)
     Path(str(args.out) + ".json").write_text(json.dumps(
-        {"method": args.method, "source": args.source, "params": params,
+        {"method": args.method, "source": args.source,
+         "params": {k: v for k, v in params.items() if k != "cellpose_model"},
          "tolerance_um": args.tolerance_um, "skipped_crops": skipped}, indent=2, ensure_ascii=False))
     print(f"ALL{'':17s} marked {int(total.marked):4d}  recall {recall:.2f}  precision {precision:.2f}"
           + (f"   (skipped, no points: {', '.join(skipped)})" if skipped else ""))

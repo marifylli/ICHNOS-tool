@@ -19,10 +19,10 @@ then command, result (numbers), cause (if failed) and next action.
 | Q6 | H2O2 5/10, 0/2h | Second field (01b, ~16:27) is not in the log. | open |
 | Q7 | Medium 8/10 | Two medium images (folder `ΘΡΕΠΤΙΚΌ` and `600/0h/ΘΡΕΠΤΙΚΟ`), one log row. | open |
 | Q8 | NT DTT 9/10, 2h | 100/200 µM folders swapped. | **resolved 2026-10-10**: log is authoritative (order 100 → 50 → 200) |
-| Q9 | Camera | Please image one slide, same field, at Exp 150, 200, 300, 400 and 600, both channels, plus one frame with the shutter closed at each exposure (~5 min). This is the direct linearity test; the data so far cannot provide it. | open |
+| Q9 | Camera | Please image one slide, same field, at Exp 150, 200, 300, 400 and 600, both channels, plus one frame with the shutter closed at each exposure (~5 min). This is the direct linearity test; the data so far cannot provide it. | **closed 2026-10-12**: no further experiments will be run; red-channel linearity stays an assumption |
 | Q10 | Camera | The log lists "Offset 10 / 50". Is that 10 for one channel and 50 for the other (which)? | **answered 2026-10-10**: 10 for preview (pvw), 50 for acquisition (acq), i.e. 50 for every saved image |
 | Q11 | Camera | Does the capture software apply per-channel colour gains or white balance to the fluorescence frames? The red background sits at ~50–60 at every exposure, which the acquisition offset alone does not explain. | open |
-| Q12 | Segmentation | Mark the centre of every cell (Fiji multi-point) on 7 bright-field crops, one per session (the 9/10 crop includes an air bubble), so masks can be scored. | open |
+| Q12 | Segmentation | Mark the centre of every cell (Fiji multi-point) on 7 bright-field crops, one per session (the 9/10 crop includes an air bubble), so masks can be scored. | **answered 2026-10-12**: 212 cells marked, 15 unsure, one annotator |
 
 ## 2026-10-10 00:44 — Build acquisition log — PASS
 
@@ -230,3 +230,72 @@ then command, result (numbers), cause (if failed) and next action.
 - Cause: the corrected `align_brightfield.py` and its tests never reached the laptop on 2026-10-11 18:41. The copy step reported success but wrote the previous version again (same file name as the earlier delivery; the file's md5 on the laptop was that of the older version). Commit `8d9fbd2` therefore holds the older code under a message that describes the fix; its run_log entry is correct.
 - Fix: delivered again under a new name and checked on the laptop by md5 and by `--search-up` being present before reporting. From now on every delivery is checked on the laptop this way.
 - Next: tests, then run 2 again.
+
+## 2026-10-12 17:48 — Bleed-through decision
+
+- No single-reporter (green-only) control exists, so the green→red bleed-through coefficient cannot be measured. Decision (wet lab): keep the illustrative `--bleed-default 0.05` for every session. Consequence: red values carry an unknown, possibly session-independent, bias; to be stated in `limitations.md`.
+
+## 2026-10-12 17:50 — Step 1c: reference points in place; baseline scores — PASS (data), FAIL (current masks)
+
+- Received from the wet lab: 7 `<crop>.points.csv` (212 cells) and 3 `<crop>.unsure.points.csv` (15 points), copied to `data/segmentation_reference/` with the unsure files renamed to `<crop>.unsure.csv`, the name the scorer reads. Originals left in Downloads. Points drawn on the crops land on the cells (X = column, Y = row confirmed). One annotator, so human-to-human agreement is not measured.
+- Scores (`scripts/score_segmentation.py`, tolerance 0.5 µm), pooled over the 7 crops:
+
+| Masks | Recall | Precision |
+|---|---|---|
+| current run: `sparse` on green + red | 0.44 | 0.31 |
+| bright-field `transmitted` (defaults) | 0.64 | 0.53 |
+| bright-field `brightfield_rim` (defaults set by eye) | 0.50 | 0.64 |
+
+- The masks behind the 2026-10-10 full run find fewer than half of the marked cells and two thirds of them are not cells. Every per-object number derived from that run is withdrawn.
+- `brightfield_rim` fails where rims are thin and do not close (5/10 H2O2: recall 0.18) and in crowded clumps (7/10 DTT: 0.40).
+- Split fixed before tuning: tune on 20261005_h2o2_tr, 20261006_dtt_tr, 20261007_dtt_tr, 20261008_h2o2_nt; test on 20261006_h2o2_tr, 20261007_h2o2_tr, 20261009_dtt_nt.
+- Next: settings grid for `brightfield_rim` and `transmitted` on the tuning crops; Cellpose as a third candidate.
+
+## 2026-10-12 17:59 — Step 1d: alignment, full run 2 (`--search-up 2`) — PASS
+
+- Command: `python3 scripts/align_brightfield.py --manifest data/acquisition/manifest/images.csv --out outputs/align_20261011_v2/align.csv --write-manifest outputs/align_20261011_v2/images_aligned.csv --search-up 2`
+- Result: all 294 rows had candidates (the 7 rows with no frame in the manifest found theirs in the timepoint folder). Cut (95th percentile of unrelated z) 7.4, same as run 1. **288 of 294 rows matched** (run 1: 256 of 287); median shift 3.2 px. 34 matched rows got a different frame from the manifest's name-based pick.
+- Not matched (6): the 2 medium controls (no cells; expected), and 4 fields: `h2o2_series_0uM` 5/10 `0/2h` (best shift at the 200 px search limit), `h2o2_series_300uM_cluster` 5/10, `dtt_0610_50uM_cluster` 6/10, `h2o2_0710_s1429_20uM_R3` 7/10 (`ΠΙΟ ΔΕΞΙΑ`). These get no bright-field and will be refused by a bright-field run rather than segmented from fluorescence.
+- 20 matched rows are shifted by more than 20 px (up to 233 px), 10 of them in 5/10 H2O2; consistent with the stage moving between the bright-field and fluorescence shots. Their masks are shifted accordingly; a strip along one edge has no masks.
+- 5 matched rows have a small margin over the next frame (z within 5 of the runner-up, two of them below it because the one-to-one rule gave the better frame to a neighbour): `dtt_0610_100uM_normal` (30.0 vs 34.1), `dtt_0710_s1520_50uM_R1` (9.8 vs 8.5), `…_R3` (13.8 vs 9.0), `nt_dtt_0910_0h_50uM_R1` (31.1 vs 29.9), `…_R3` (29.3 vs 30.0). In the last pair both frames fit both fields at ~3 px, so the two fields probably overlap. Kept, flagged for a visual check.
+- Output for the pipeline: `outputs/align_20261011_v2/images_aligned.csv`.
+
+## 2026-10-12 18:04 — Step 1c: settings grids for the classical bright-field methods — PARTIAL
+
+- Grids run in the cloud workspace on each crop plus a 250 px margin (faster than whole frames; the chosen settings are to be re-scored on whole frames with `score_segmentation.py`). Tune = 5/10 H2O2, 6/10 DTT, 7/10 DTT, 8/10 H2O2 nt; test = 6/10 H2O2, 7/10 H2O2, 9/10 DTT nt (fixed before the grids).
+- `brightfield_rim`, 48 settings (rim_sigmas 1.5–3.0, closing 0.35–1.0 µm, opening 0.35–0.7 µm, min_solidity 0.6/0.8): best tune F1 0.57 (rim_sigmas 3.0, closing 1.0 µm, opening 0.7 µm, solidity 0.8): recall 0.50, precision 0.67; test F1 0.68. Per crop F1 from 0.21 (5/10 H2O2, thin rims that do not close) to 0.86 (6/10 DTT).
+- `transmitted`, 18 settings (noise_sigmas 1.5–3.5, erosion 4–12 px, min_size 200/400): best tune F1 0.69 (noise_sigmas 3.5, erosion 12 px): recall 0.70, precision 0.67; test F1 0.62 (recall 0.71, precision 0.56). Best at the edge of the grid. Its masks still include part of the halo, which the point score does not see.
+- Reading: tuning moves the classical methods only a little (F1 ~0.55 → ~0.6–0.7) and the weak sessions stay weak (7/10 DTT F1 ≤ 0.51 with either). Cellpose, already supported by `segment_cells(method="cellpose")`, is the next candidate. It cannot run in the cloud workspace (its model download from huggingface.co is blocked there), so it runs on the laptop.
+- New: `score_segmentation.py --method cellpose [--cellpose-gpu]` loads the model once; `tests/image/test_score_segmentation_cli.py` (2 tests, a stand-in model).
+
+## 2026-10-12 18:22 — Step 1c: Cellpose against the hand-marked cells — PASS
+
+- Command (laptop): `python3 scripts/score_segmentation.py --reference data/segmentation_reference --method cellpose --cellpose-gpu --out outputs/segscore_20261012/cellpose.csv --overlay-dir outputs/segscore_20261012/cellpose` (cellpose 4, model `cpsam`, downloaded on first use, 1.15 GB; default settings, nothing tuned).
+- Result, recall / precision per crop: 5/10 H2O2 1.00 / 0.92; 6/10 DTT 0.89 / 1.00; 6/10 H2O2 1.00 / 0.95; 7/10 DTT 0.90 / 0.76; 7/10 H2O2 0.92 / 0.92; 8/10 H2O2 nt 0.97 / 0.93; 9/10 DTT nt 0.74 / 0.96. **Pooled: recall 0.91, precision 0.90** (212 cells), against 0.44 / 0.31 for the masks of the 2026-10-10 run and ≤ 0.71 / 0.67 for the tuned classical methods.
+- Nothing was tuned on these crops, so all 7 act as test data.
+- Overlays: masks follow the cell outline without the halo; the air-bubble shadow in 9/10 is not masked. Most of the 11 "false" masks in 7/10 DTT sit on real cells that were not marked (a cluster of small cells), so precision is if anything underestimated. Real misses: small dark cells in 9/10 DTT nt; very large elongated cells at the edge of a clump in 7/10 DTT get no mask (and were not marked either).
+- Speed on the laptop: ~110 s per whole frame (from the overlay timestamps), i.e. ~9 h for 294 fields. Whether `--cellpose-gpu` used the Apple GPU is not yet confirmed.
+- Decision: masks from Cellpose on the bright-field frame (`--segmentation-method cellpose --segmentation-source brightfield`), placed on the fluorescence with the shifts of `outputs/align_20261011_v2/images_aligned.csv`. `brightfield_rim` stays in the code as the scored alternative.
+- Limits: one annotator; 7 crops of 700 × 700 px (212 cells); points score detection and separation, not the outline.
+- Next: smoke run of the pipeline on 4 fields to time it, then the full run.
+
+## 2026-10-12 18:33 — Data are final
+
+- No further experiments will be run. The data set is the seven sessions already imaged (H2O2 transfected on 5/10, 6/10, 7/10; DTT transfected on 6/10, 7/10; H2O2 non-transfected 8/10; DTT non-transfected 9/10).
+- Consequences: Q9 (direct linearity test, needed new imaging) is closed unanswered, so linearity of the red channel and the per-second normalisation of red remain assumptions. Questions about the existing records (Q1–Q7, Q11) can still be answered.
+- Validation must therefore work with 3 independent days for H2O2 and 2 for DTT.
+
+## 2026-10-12 18:36 — Decision: calibration and validation by leave-one-day-out
+
+- For each stressor, each transfected day is held out in turn: everything fitted from data (autofluorescence baseline, fluorescence-to-model calibration, decoder settings) is fitted on the other days of that stressor plus the non-transfected sessions, and the held-out day is decoded **one field at a time**, as a user submits one image. Reported: accuracy per held-out day and the mean, also for 3 fields pooled per culture.
+- H2O2: 3 folds (5/10, 6/10, 7/10). DTT: 2 folds (6/10, 7/10), each calibrated on a single day; stated as a limitation.
+- Non-transfected sessions (8/10, 9/10) are always in calibration (autofluorescence) and never scored (no reporter).
+- R1–R3 and F-numbered fields of one sample stay together in a fold; they are not independent.
+- Fixed before the full Cellpose run and before any decoding of real data.
+
+## 2026-10-12 18:36 — Pipeline smoke run with Cellpose bright-field masks — PASS
+
+- Command: `time python3 scripts/run_pipeline.py --manifest outputs/smoke_cellpose/manifest.csv --out outputs/smoke_cellpose/cells.csv --segmentation-method cellpose --segmentation-source brightfield --cellpose-gpu --bleed-default 0.05 --saturation-value 255` (first 4 rows of `images_aligned.csv`, all 5/10 H2O2).
+- Result: 4/4 fields, 167 cells, all `mask_source = brightfield`, QC pass 96 %. Median cell area 1,275 px = 38 µm² (≈ 7 µm across; the 5/10 cells are large in the bright-field too), against 147 px for the same session with fluorescence masks.
+- Time: 9 min 25 s for 4 fields (≈ 141 s per field) at 5 % CPU, so the work runs on the Apple GPU (MPS). Full run ≈ 11–12 h.
+- Next: full run overnight with the batched runner, keeping the laptop awake.
