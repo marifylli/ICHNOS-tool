@@ -206,3 +206,20 @@ then command, result (numbers), cause (if failed) and next action.
 
 - Command: `python3 -m pytest tests/image/test_brightfield_rim.py tests/image/test_segmentation_score.py -q`
 - Result: 22 passed. 7 `DeprecationWarning`s come from inside scikit-image (`grayreconstruct.py`, used by `h_maxima`) under NumPy 2.5, not from project code; no action.
+
+## 2026-10-11 16:13 — Step 1d: bright-field ↔ fluorescence alignment — dry run PASS, full run pending
+
+- Why: bright-field masks are only usable on the fluorescence frames if the bright-field shows the same field and the displacement between them is known. `scripts/align_brightfield.py` (existing) places the bright-field mask on the red frame at every shift, takes the best, and accepts it only if it scores above what the same mask reaches on unrelated fields.
+- Change: `--write-manifest PATH` writes the aligned manifest to a new file (paths resolved) instead of overwriting the input with `--write-back`; `--out` and `--write-manifest` refuse to overwrite. Tests: `test_align_brightfield_cli.py`, 6 passed in the cloud workspace (2 new).
+- The manifest has 7 of 294 rows with no bright-field frame at all (5/10 H2O2 tr 2, 6/10 DTT tr 1, 8/10 H2O2 nt 4).
+- Dry run in the cloud workspace on the 7 reference fields (~10 s per field): 6 of 7 match, shifts 1–6 px, z on own field 15–25 against 4–15 on unrelated ones. The non-transfected fields match too (autofluorescence is enough), though 9/10 only weakly (22.7 vs 15.4). The 5/10 H2O2 field (`75/0`) does not match (z 12.7, best shift 80 px): its bright-field probably belongs to the other field of that folder.
+- Next: full run on the laptop.
+
+## 2026-10-11 18:31 — Step 1d: alignment, full run 1 — PARTIAL
+
+- Command: `python3 scripts/align_brightfield.py --manifest data/acquisition/manifest/images.csv --out outputs/align_20261011/align.csv --write-manifest outputs/align_20261011/images_aligned.csv`
+- Result: 287 of 294 rows had a bright-field frame in the manifest (7 have none). z on unrelated fields: median 4.5, 95th percentile 7.4 (the cut); on own field: median 22.8. 256 of 287 rows above the cut; their median shift 3.2 px, 18 of them shifted more than 20 px (up to 233 px, probably the stage moved between bright-field and fluorescence).
+- 31 rows below the cut, by session: 9/10 DTT nt 16, 7/10 DTT tr 4, 8/10 H2O2 nt 3 (+1 medium), 5/10 H2O2 tr 2 (+1 medium), 6/10 DTT tr 2, 7/10 H2O2 tr 2. The two medium controls have no cells and are expected to fail.
+- Cause, checked against the folder listings: every timepoint folder holds one bright-field frame per field, named by position (`Image000 ΔΕΞΙΑ.tif` for field `…ΔΕΞΙΑ`), but the names do not match reliably (`dejia` vs `δεξια`, `ΠΑΝΨΩ` vs `ΠΑΝΩ`, `κατγω` vs `κατω`, `ΚΑΤΩ` vs `ΚΑΤΟΥ`, `αριστερα` vs `αρ`, `Image000333.tif`), so the manifest builder's name-based pick gave 16 frames to two fields each and others the wrong frame. The alignment rejected the wrong ones correctly, except one: `nt_dtt_0910_0h_200uM_R2` passed at z 8.9 (just above 7.4) with a 112 px shift on a frame that belongs to `…_R1` (z 24.9, 3 px). A frame cannot belong to two fields.
+- Fix (`scripts/align_brightfield.py`): `--search-up 2` tries every `Image*.tif` of the timepoint folder for every field of it, and frames are assigned one-to-one so that the summed z is largest (Hungarian assignment); this one-to-one rule also applies without `--search-up`. New columns `z_runner_up` (best z among the frames not chosen) and `z_best_candidate`. Tests: 8 passed (2 new). Dry run on the two worst folders (7/10 DTT `25/2h`, 9/10 DTT nt `0/4h`): all 6 fields get their own frame, z 19–33 against runner-up 4–6, shifts 4–13 px.
+- Next: full run 2 with `--search-up 2`.

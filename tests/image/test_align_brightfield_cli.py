@@ -155,3 +155,36 @@ def test_a_glob_that_matches_nothing_says_so_instead_of_failing_obscurely(tmp_pa
     )
     assert done.returncode != 0
     assert "--brightfield-glob" in (done.stdout + done.stderr)
+
+
+def test_write_manifest_leaves_the_input_untouched(tmp_path):
+    """The run's manifest is the record of what was matched to what; the
+    aligned copy goes to a new file, with paths that work from anywhere."""
+    manifest = build_session(tmp_path)
+    before = manifest.read_bytes()
+    target = tmp_path / "out" / "images_aligned.csv"
+    target.parent.mkdir()
+    done = subprocess.run(
+        [sys.executable, str(SCRIPT), "--manifest", str(manifest),
+         "--out", str(tmp_path / "aligned.csv"), "--min-size", "80",
+         "--write-manifest", str(target)],
+        capture_output=True, text=True, check=False,
+    )
+    assert done.returncode == 0, done.stderr
+    assert manifest.read_bytes() == before
+    written = pd.read_csv(target).set_index("sample_id")
+    assert Path(written.loc["d0-01a", "bright_field_path"]).is_file()
+    assert Path(written.loc["d0-01a", "green_path"]).is_file()
+    assert pd.isna(written.loc["d1-01a", "bright_field_path"])
+
+
+def test_existing_outputs_are_not_overwritten(tmp_path):
+    manifest = build_session(tmp_path)
+    (tmp_path / "aligned.csv").write_text("keep me")
+    done = subprocess.run(
+        [sys.executable, str(SCRIPT), "--manifest", str(manifest),
+         "--out", str(tmp_path / "aligned.csv")],
+        capture_output=True, text=True, check=False,
+    )
+    assert done.returncode != 0 and "already exists" in done.stderr
+    assert (tmp_path / "aligned.csv").read_text() == "keep me"

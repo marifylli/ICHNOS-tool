@@ -77,9 +77,17 @@ def main() -> None:
     parser.add_argument("--min-size", type=int, default=200,
                         help="smallest bright-field object kept, in pixels")
     parser.add_argument("--write-back", action="store_true",
-                        help="write bright_field_path and the shifts into the manifest")
+                        help="write bright_field_path and the shifts into the manifest, in place")
+    parser.add_argument("--write-manifest", type=Path,
+                        help="write the manifest with bright_field_path and the shifts to this "
+                             "new file instead, leaving the input manifest untouched")
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
+    if args.write_back and args.write_manifest:
+        raise SystemExit("choose one of --write-back and --write-manifest")
+    for target in (args.out, args.write_manifest):
+        if target is not None and target.exists():
+            raise SystemExit(f"output path already exists: {target}")
 
     manifest = pd.read_csv(args.manifest)
     for column in ("green_path", "red_path"):
@@ -184,7 +192,7 @@ def main() -> None:
     result.to_csv(args.out, index=False)
     print(f"\nwrote {args.out}")
 
-    if args.write_back:
+    if args.write_back or args.write_manifest:
         for column in ("bright_field_path", "brightfield_shift_dy", "brightfield_shift_dx"):
             if column not in manifest:
                 manifest[column] = "" if column == "bright_field_path" else np.nan
@@ -200,9 +208,19 @@ def main() -> None:
                 item.brightfield_shift_dy if keep else np.nan)
             manifest.loc[int(item.row), "brightfield_shift_dx"] = (
                 item.brightfield_shift_dx if keep else np.nan)
-        manifest.to_csv(args.manifest, index=False)
+        target = args.write_manifest or args.manifest
+        if args.write_manifest:
+            # Paths in the manifest are relative to it; the new file may sit
+            # elsewhere, so store them resolved.
+            for column in ("green_path", "red_path", "bright_field_path"):
+                manifest[column] = [str(resolve(args.manifest, v)) if isinstance(v, str) and v else v
+                                    for v in manifest[column]]
+            with target.open("x", newline="") as handle:
+                manifest.to_csv(handle, index=False)
+        else:
+            manifest.to_csv(target, index=False)
         print(f"wrote {int(matched.sum())} bright-field path(s) and their shifts into "
-              f"{args.manifest}; left {int((~matched).sum())} row(s) without one")
+              f"{target}; left {int((~matched).sum())} row(s) without one")
 
 
 if __name__ == "__main__":
