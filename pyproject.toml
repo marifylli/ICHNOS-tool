@@ -25,9 +25,11 @@ cellpose = ["cellpose", "torch"]
 # Swapping the solver entry point is its own change, in its own step.
 model = ["python-libsbml", "tellurium", "PyYAML"]
 dev = ["pytest"]
+# ichnos_vail, the local application over the scripts (app/ichnos_vail.py).
+ichnos_vail = ["streamlit>=1.50"]
 
 [tool.setuptools]
-packages = ["ichnos", "ichnos.models", "ichnos_image"]
+packages = ["ichnos", "ichnos.models", "ichnos_image", "ichnos_vail"]
 
 [tool.setuptools.package-data]
 # The SBML sources ship inside the wheel and are reached with

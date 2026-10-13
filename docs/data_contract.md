@@ -80,8 +80,15 @@ Input: a cell table from `run_pipeline.py` + `normalize_exposure.py`.
 control), any other name an unknown dose. Output `decoded.csv`: one row per
 field and per sample (fields of one condition averaged) with `p_<dose>uM`,
 `map_dose_uM`, `credible80_uM`, `entropy_vs_prior`, `outside_reference`,
-`verdict`; `validation.csv` holds the decoder's leave-one-day-out scores on
-the reference; `summary.json` settings, fingerprints and verdict counts.
+`verdict`; for the time since the stress `time_map`, `time_credible80`,
+`pt_<window>`, `time_entropy_vs_prior`, `time_outside_reference`,
+`time_verdict`; and `known_dose_uM`, `known_time_h` (what the table itself
+says; blank when unknown). `validation.csv` and `validation_time.csv` hold the
+leave-one-day-out scores of the dose and time decoders on the reference;
+`summary.json` settings, fingerprints, both track records and verdict counts.
+`measurement_time_hours` may be blank in a new culture's table: the stress
+time is then unknown, and the paired reference is the mean of the day's
+0 µM images.
 
 ## Rules every stage keeps
 

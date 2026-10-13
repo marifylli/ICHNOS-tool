@@ -275,6 +275,13 @@ No further experiments will be run, so these limits are final for this data set.
   when the held-out day lies outside the spread of the training days (both
   7/10 days). With one training day (DTT) the between-day spread cannot be
   estimated at all.
+- **Time since the stress.** The tool decodes it into windows from the tandem
+  timer, but in these data the timer ratio of reporter-positive cells does not
+  change with time since the stress (slopes −0.08 to +0.02 per hour, p ≥ 0.12
+  on every day). Leave-one-day-out, the time decoder scores accuracy 0.19
+  against chance 0.31 for H2O2 and 0.20 against 0.28 for DTT. The timer marks
+  time since a burst of new reporter synthesis, and the stress set off none
+  that these data can see.
 - **The model-based decoder must not be offered to users** in its current
   state. For H2O2 it puts every field at 0–75 µM with confidence (−22 bits
   against the prior). For DTT it returns the prior.

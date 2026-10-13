@@ -38,10 +38,18 @@ which writes the four sub-folders and `run-manifest.json` (configuration,
 input sha256, git commit, sha256 of every output). About 2–3 minutes.
 
 Decoding a new culture: `decode_field.py` (`field_decoder`) trains the
-paired or absolute decoder on every reference day, decodes the new fields,
-and attaches a verdict and the decoder's leave-one-day-out record
+paired or absolute dose decoder and the timer-based time-window decoder on
+every reference day, decodes the new fields, and attaches to each answer a
+verdict and that decoder's leave-one-day-out record
 ([user_guide.md](user_guide.md)). `make_worked_example.py` turns a reference
 day into a "new culture" with hidden doses to try it.
+
+The ichnos_vail application: `app/ichnos_vail.py` (Streamlit) over the `ichnos_vail` package. It
+builds the scripts' own command lines (`commands`), runs them as detached
+background jobs with status and log on disk (`jobs`, `chain`), checks a
+manifest before a run (`manifest_check`) and displays the files the scripts
+wrote (`results`). It computes nothing itself, so the scripts' tests cover
+every result it shows.
 
 Supporting tools: `score_segmentation.py` scores any segmentation method
 against the hand-marked cells in `data/segmentation_reference/`;

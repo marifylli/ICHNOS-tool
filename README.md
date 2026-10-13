@@ -68,6 +68,8 @@ python3 scripts/run_analysis.py --config examples/analysis_202610.json --out-dir
 To use the tool on your own images, including decoding the dose of a new
 culture with `scripts/decode_field.py`, start with
 [docs/user_guide.md](docs/user_guide.md).
+The **ichnos_vail** application runs the same steps from the browser:
+`pip install -e ".[ichnos_vail]"` then `streamlit run app/ichnos_vail.py`.
 
 What the data show: a dose-ordered reporter response only on one H2O2 day,
 no resolvable peak time, an uncalibrated model that overpredicts the H2O2

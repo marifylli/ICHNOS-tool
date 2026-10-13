@@ -5,9 +5,9 @@ timer reporter to two answers:
 
 1. **Does my reporter respond to the stress, and how large a response could
    my experiment have detected?** (analysis of a reference experiment)
-2. **Which dose was this new culture exposed to?** (decoding new images
-   against that reference, with a verdict saying whether the answer can be
-   trusted)
+2. **Which dose was this new culture exposed to, and how long ago?**
+   (decoding new images against that reference, with a verdict for each
+   answer saying whether it can be trusted)
 
 The tool runs from the command line (Python 3.10 or later, macOS or Linux).
 Steps 1–3 below take hours for a full experiment; everything after takes
@@ -26,6 +26,22 @@ minutes.
 - With the team's October 2026 data as reference, no new image gets the
   verdict "dose estimate": those data contain no dose signal that carries over
   to a new day. That is a property of the data, and the tool says so.
+
+## The ichnos_vail application
+
+Everything below can also be done from **ichnos_vail**, a local app in the browser:
+
+```bash
+pip install -e ".[ichnos_vail]"
+streamlit run app/ichnos_vail.py        # macOS, for long runs: caffeinate -i streamlit run app/ichnos_vail.py
+```
+
+Pages follow the steps of this guide (check images, images → cells, analyse,
+decode a new culture, jobs). Each page shows the exact command it is about to
+run; long runs continue in the background if the browser is closed and are
+found again under **Jobs** (kept in `outputs/ichnos_vail_jobs/`). The app is served to
+this computer only (`.streamlit/config.toml`). It computes nothing itself:
+results are those of the scripts below.
 
 ## 0. Install
 
@@ -139,8 +155,28 @@ reference days, then one row per field and per sample:
 | `needs a 0 µM image` | Paired decoder without a same-day control | Image a 0 µM culture on the same day, or use `--decoder absolute` |
 | `too few cells` | Fewer usable cells than `--min-cells` (default 20) | Image more cells or a denser field |
 
-Full numbers: `decoded.csv` (posterior `p_<dose>uM` for every dose),
-`validation.csv`, `summary.json`.
+**Time since the stress** is decoded next to the dose, into windows
+(`--time-windows 0,2,4,6,8` by default: 0–2, 2–4, 4–6, 6–8 h), from the
+tandem timer: red/green of the reporter-positive cells, which does not depend
+on how much reporter a cell carries. Leave `measurement_time_hours` blank in
+the manifest when you do not know when the stress came. The time decoder has
+its own track record and its own verdict:
+
+| Time verdict | Meaning | What to do |
+| --- | --- | --- |
+| `time estimate` | Informative posterior from a time decoder that beat chance on held-out days | Report `time_map` with `time_credible80` |
+| `not validated` / `no time information` / `unlike reference` | As for the dose | Do not report a time |
+| `too few reporter cells` | Fewer than 5 reporter-positive cells: the timer cannot be read | Image more cells |
+| `unstressed control` | A 0 µM culture has no time since stress | — |
+| `time not available` | The reference cannot train a time decoder (e.g. its stressed images cover fewer than 2 windows) | Extend the reference |
+
+A reference field whose window no other reference day covers cannot be
+scored on held-out days; it is reported as unscorable, never as right or
+wrong. Windows can only be told apart if the reference has stressed images
+in each of them, on more than one day.
+
+Full numbers: `decoded.csv` (posteriors `p_<dose>uM` and `pt_<window>`),
+`validation.csv` and `validation_time.csv` (track records), `summary.json`.
 
 ## Worked example (team data, October 2026)
 
@@ -163,6 +199,17 @@ than the reference days), 15 `not validated`, 10 `no dose information`, none
 `dose estimate`. The most probable dose would have been right for 15 % of the
 hidden fields, below chance, so declining to name a dose is the correct
 answer on these data ([run_log.md](run_log.md), 2026-10-13).
+
+With `--hide-time` the example also blanks the hours since stress
+(`key.csv` keeps them). The time decoder then has two reference days, 5/10
+(images at 1–4 h) and 6/10 (6–7 h), which never cover each other's windows,
+so it has no track record; of the 39 hidden fields, 20 get `no time
+information`, 7 `not validated`, 7 `unlike reference`, 5 `too few reporter
+cells`, none `time estimate`. With all three H2O2 days as reference, its
+leave-one-day-out record is accuracy 0.19 against chance 0.31 (−0.95 bits per
+field); for DTT 0.20 against 0.28 (−0.21 bits): the timer ratio does not carry
+the time since stress in these data, because the stress did not set off new
+reporter synthesis in the cells that carry it.
 
 ## When something goes wrong
 

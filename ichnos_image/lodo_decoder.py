@@ -96,12 +96,19 @@ def field_features(cells: pd.DataFrame, quantile: float = 0.9, min_cells: int = 
 
 
 def _reference(day: pd.DataFrame, column: str, time: float, exclude_condition: str) -> float:
-    """The day's 0 µM value of ``column`` at ``time``: per-condition means, linear in time, flat outside."""
+    """The day's 0 µM value of ``column`` at ``time``: per-condition means, linear in time, flat outside.
+
+    Without a time (a new culture whose stress time is unknown, imaged next to its control) or
+    without control times, the mean of the day's 0 µM conditions.
+    """
     control = day[(day["dose_uM"] == 0) & (day["condition_id"] != exclude_condition)].dropna(subset=[column])
     if control.empty:
         return np.nan
-    points = control.groupby("condition_id").agg(t=("time_h", "mean"), v=(column, "mean")).sort_values("t")
-    return float(np.interp(time, points["t"], points["v"]))
+    points = control.groupby("condition_id").agg(t=("time_h", "mean"), v=(column, "mean"))
+    timed = points.dropna(subset=["t"]).sort_values("t")
+    if not np.isfinite(time) or timed.empty:
+        return float(points["v"].mean())
+    return float(np.interp(time, timed["t"], timed["v"]))
 
 
 def add_paired(fields: pd.DataFrame) -> pd.DataFrame:

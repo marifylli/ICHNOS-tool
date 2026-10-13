@@ -228,6 +228,7 @@ def main() -> None:
                                     "z_green", "shift_px", "at_search_limit"]]
               .to_string(index=False))
 
+    args.out.parent.mkdir(parents=True, exist_ok=True)
     result.to_csv(args.out, index=False)
     print(f"\nwrote {args.out}")
 
@@ -254,6 +255,7 @@ def main() -> None:
             for column in ("green_path", "red_path", "bright_field_path"):
                 manifest[column] = [str(resolve(args.manifest, v)) if isinstance(v, str) and v else v
                                     for v in manifest[column]]
+            target.parent.mkdir(parents=True, exist_ok=True)
             with target.open("x", newline="") as handle:
                 manifest.to_csv(handle, index=False)
         else:
