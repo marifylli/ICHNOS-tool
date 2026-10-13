@@ -1,0 +1,12 @@
+{
+  "cells": "../outputs/full_20261012_cellpose/cells_all_per_s.csv",
+  "steps": ["timecourse", "induction", "model_compare", "decoder_lodo"],
+  "n_boot": 1000,
+  "seed": 0,
+  "positive_quantile": 0.9,
+  "clearance_per_h": [null, 1.0, 3.0],
+  "decoder_clearance_per_h": null,
+  "profile": "default",
+  "decoders": ["absolute", "paired", "model"],
+  "min_cells": 20
+}

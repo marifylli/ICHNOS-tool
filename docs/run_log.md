@@ -390,3 +390,17 @@ then command, result (numbers), cause (if failed) and next action.
 - Pooling the 3 fields of a sample does not help (H2O2 paired 0.10 accuracy, −1.09 bits; DTT paired −1.22 bits): averaging cuts the within-day noise, so the day-to-day mismatch weighs more.
 - Reading: (1) these data contain no dose information that carries over to a new day, with or without a same-day 0 µM reference, so no dose can be decoded from a single image. (2) Where there is no signal, the empirical decoders mostly stay near the prior, as they should, but they are overconfident whenever the new day lies outside the spread of the training days: 2 training days (H2O2) or 1 (DTT, between-day spread set to 0) are too few to estimate that spread. (3) The uncalibrated model decoder is the dangerous one: confidently wrong for H2O2 and silent for DTT. It should not be offered to users until it is calibrated on data with a dose response.
 - Limits: 3 H2O2 days and 2 DTT days; fields are not independent cultures; 5/10 H2O2 has too few reporter-positive cells for the model decoder (fold not scored); the paired reference is flat outside the 0 µM time range (7/10 H2O2: stressed samples at ~1 h and ~7.5 h).
+
+## 2026-10-13 08:36 — Steps 10–11 reproduced on the laptop — PASS
+
+- `python3 -m pytest -q tests/image/test_lodo_decoder.py`: 10 passed.
+- `python3 scripts/evaluate_decoder_lodo.py --cells outputs/full_20261012_cellpose/cells_all_per_s.csv --out-dir outputs/decoder_lodo_20261013`: every score identical to the cloud-workspace run. Figure: `outputs/decoder_lodo_20261013/posterior.png`.
+- Committed and pushed as a019ca0.
+
+## 2026-10-13 08:46 — Steps 12–13: analysis runner and documentation — PASS (code)
+
+- New: `scripts/run_analysis.py` (one JSON configuration runs time courses, induction, model comparison and the leave-one-day-out decoder into sub-folders, refuses unknown keys and existing outputs, stops at the first failing step, writes `run-manifest.json` with configuration, input sha256, git commit and output sha256), `examples/analysis_202610.json` (the October settings), `tests/image/test_run_analysis.py` (4 tests).
+- Cloud workspace: full suite 690 passed (the 2 Cellpose tests fail there only). The runner on the real cell table (2 min 19 s) reproduces `effects.csv`, `compare.csv` and `metrics.csv` of the separate runs exactly.
+- `scripts/run_workflow.py` (model-based posterior) is not configured for these data: experimental mode requires crosstalk controls and forbids a default bleed value, and it needs a session calibration and a replicate covariance from ≥ 3 independent cultures per condition, none of which exist; steps 9–11 also show the uncalibrated model decoder is confidently wrong. Reasons recorded in `docs/architecture.md`.
+- Docs written: `docs/architecture.md` (packages, the 9-stage route used for the October data with commands, design choices, why not run_workflow), `docs/data_contract.md` (identifiers, manifest, cell table, analysis outputs, rules), `docs/limitations.md` new section "Real-data analysis, October 2026" (measurement, segmentation, design, findings, what would remove the limits), `README.md` status rows and an analysis section.
+- Delivered to the laptop, md5 checked. Next: reproduce with `run_analysis.py` on the laptop.
