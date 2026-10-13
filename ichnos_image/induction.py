@@ -193,6 +193,9 @@ def _trend(observed: dict, replicates: list, meta: pd.DataFrame) -> pd.DataFrame
         rows.append({"session_id": session, "day": meta.loc[session, "day"], "stressor": meta.loc[session, "stressor"],
                      "readout": readout, "n_doses": len(doses), "slope_per_log10_dose": slope,
                      "ci_low": float(lo), "ci_high": float(hi), "p_two_sided": _bootstrap_p(reps)})
-    trend = pd.DataFrame(rows).sort_values(["stressor", "day", "readout"]).reset_index(drop=True)
+    columns = ["session_id", "day", "stressor", "readout", "n_doses", "slope_per_log10_dose",
+               "ci_low", "ci_high", "p_two_sided"]
+    # fewer than 3 doses on every day: no trend can be fitted, and the table stays empty
+    trend = pd.DataFrame(rows, columns=columns).sort_values(["stressor", "day", "readout"]).reset_index(drop=True)
     trend["q_bh"] = _benjamini_hochberg(trend["p_two_sided"].to_numpy())
     return trend
