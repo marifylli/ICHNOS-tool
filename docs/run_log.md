@@ -299,3 +299,62 @@ then command, result (numbers), cause (if failed) and next action.
 - Result: 4/4 fields, 167 cells, all `mask_source = brightfield`, QC pass 96 %. Median cell area 1,275 px = 38 µm² (≈ 7 µm across; the 5/10 cells are large in the bright-field too), against 147 px for the same session with fluorescence masks.
 - Time: 9 min 25 s for 4 fields (≈ 141 s per field) at 5 % CPU, so the work runs on the Apple GPU (MPS). Full run ≈ 11–12 h.
 - Next: full run overnight with the batched runner, keeping the laptop awake.
+
+## 2026-10-12 19:21 — Full run with Cellpose bright-field masks — started
+
+- Command: `caffeinate -i python3 scripts/run_pipeline_batched.py --manifest outputs/align_20261011_v2/images_aligned.csv --out-dir outputs/full_20261012_cellpose --batch-size 20 -- --segmentation-method cellpose --segmentation-source brightfield --cellpose-gpu --bleed-default 0.05 --saturation-value 255` at commit `69c87d0`, started 18:42.
+- Batch 0 (20 fields) finished at 19:20: ~114 s per field, so 15 batches end around 04:00.
+- Rule while it runs: no change to code, branch or packages on the laptop, because every batch starts a new process that reloads the code.
+
+## 2026-10-12 19:25 — Autofluorescence baseline and peak timing — code ready
+
+- New: `ichnos_image/timecourse.py`, `scripts/fluorescence_timecourse.py`, `tests/image/test_timecourse.py` (11 tests). Held back from the laptop until the full run ends.
+- What it does, on the exposure-normalised cells: (1) baseline per stressor and channel = median over usable non-transfected cells, subtracted from every cell (`green_af`, `red_af`); how the non-transfected medians move with dose and time is written to `baseline_diagnostics.csv`; (2) field = median of its usable cells (QC pass, not touching the edge); fields of one sample and time pooled by median; a field is (session, condition, sample), because `sample_id` repeats across time points of a series; (3) peak per transfected curve (stressor × day × dose) for green and red: the sampled maximum; if it lies between the first and last sample, a parabola through it and its two neighbours gives a time between samples; if it is the first or last sample only a bound is reported; 5–95 % interval from resampling cells within fields and fields within time points (one culture's measurement noise, not day-to-day biology); `excess_over_0uM` = value at the peak minus the same day's 0 µM curve interpolated to that time, so that a peak the unstressed culture shows too is not read as a stress response. No peak is computed for the red/green ratio: it is the timer readout and rises with time by design.
+- Time axis: `measurement_time_hours`, hours from stress addition to imaging.
+- Choices to state with the result: one constant baseline per stressor (the non-transfected cultures were imaged on other days, so no day-matched baseline exists); a constant does not move a peak in time. No flat-field correction yet.
+- Plumbing check in the cloud workspace on the old per-cell file (fluorescence masks, not to be interpreted): all 27 transfected curves processed, 17 s with 200 resamples; figure layout checked.
+
+## 2026-10-13 06:11 — Full run with Cellpose bright-field masks — PASS, 6 fields to redo
+
+- Result: 15 batches, 294 fields, 282 processed, 62,133 cell rows in `outputs/full_20261012_cellpose/cells.csv`; QC pass 94–98 % per batch. Batch time fell from ~38 to ~25 min after the first batches.
+- 12 refused:
+  - 6 without a bright-field frame (expected, see alignment run 2): `h2o2_series_0uM_F1` and `h2o2_series_300uM_cluster` (5/10), `dtt_0610_50uM_cluster` (6/10), `h2o2_0710_s1429_20uM_R3` (7/10), the two medium controls.
+  - 6 by the foreground QC (masks cover more than 20 % of the frame): `dtt_0610_0uM_F1` (1h), `dtt_0610_100uM_cluster` (1h), `dtt_0610_10uM_F1` (4h), `dtt_0710_s1335_10uM_R1` (45 min), `nt_dtt_0910_2h_0uM_R1`, `nt_dtt_0910_4h_200uM_R1`; 21.7–27.1 % with 420–1,813 objects. Two of their bright-field frames checked by eye: densely packed real cells, not noise. The 20 % cap was set for fluorescence masks, where a large foreground meant the threshold had fallen into the background; with bright-field Cellpose masks a dense slide genuinely exceeds it.
+- Fix: rerun only those 6 rows (`outputs/full_20261012_cellpose/dense_rerun/manifest.csv`, picked from the refusals recorded in the batch manifests) with `--max-foreground-fraction 0.5`, then append them to the main file as a new file `cells_all.csv`.
+- `ichnos_image/timecourse.py`, `scripts/fluorescence_timecourse.py`, `tests/image/test_timecourse.py` delivered to the laptop after the run; md5 checked.
+
+## 2026-10-13 07:17 — Dense fields, exposure normalisation, time courses — PASS (code), FAIL (question cannot be answered)
+
+- Dense rerun: the 6 fields refused at > 20 % foreground, rerun with `--max-foreground-fraction 0.5`; headers checked equal with `cmp`, appended into `outputs/full_20261012_cellpose/cells_all.csv`. Exposure normalisation: 67,580 cells → `cells_all_per_s.csv`. `test_timecourse.py`: 11 passed on the laptop.
+- `python3 scripts/fluorescence_timecourse.py --cells outputs/full_20261012_cellpose/cells_all_per_s.csv --out-dir outputs/timecourse_20261013` ran. Baseline (median of usable non-transfected cells): H2O2 green 3.35, red 4.73 grey/s (14,840 cells, 8/10); DTT green 3.90, red 6.05 grey/s (21,436 cells, 9/10).
+- Reading of the curves (`timecourse_*.png`): baseline-subtracted medians of transfected samples lie within about ±2 grey/s of zero, often below it; no dose ordering; days disagree; the 0 µM controls move as much as the stressed samples (5/10 H2O2: the 0 µM curve "peaks" at 2.3 h like 20–300 µM at 2.1–2.2 h). The peak table is therefore not a stress response and is not reported to the wet lab.
+- Checks that explain it (usable cells, per-second values):
+  - Population: share of transfected cells brighter in green than the 95th percentile of non-transfected cells of the same stressor: 5/10 H2O2 0.3 %, 6/10 H2O2 0.7 %, 6/10 DTT 2.4 %, 7/10 DTT 5.1 %, 7/10 H2O2 3.4 % (5 % expected by chance). Median green: transfected 2.2–5.1, non-transfected 3.3–3.9 grey/s. At the population level the reporter is not distinguishable from autofluorescence.
+  - Subpopulation: share of cells with green AND red above the non-transfected 90th percentile (8.5 % in non-transfected): 5/10 H2O2 2.8 %, 6/10 H2O2 8 %, 6/10 DTT 16 %, 7/10 H2O2 20 %, 7/10 DTT 23 %. Green and red correlate more in transfected cells (Spearman 0.67–0.90 vs 0.61). So a reporter-expressing subpopulation is detectable on 7/10 (both stressors) and 6/10 DTT, not on 5/10 or 6/10 H2O2.
+  - That subpopulation does not follow the stress: the 0 µM controls reach the same shares as the stressed samples (7/10 DTT 0 µM 36 % at 4.8 h vs 200 µM 42 % at 5.3 h; 7/10 H2O2 0 µM 35 % at 6.2 h vs 13–31 % at 20–600 µM); no dose ordering at any time.
+- Conclusion: from these images the time of peak *stress-induced* fluorescence cannot be determined; expression, where detectable, is as high without stress as with it. Possible causes, not separable with these data: basal (stress-independent) promoter activity, low or day-dependent transfection, non-transfected reference imaged on other days at shorter exposures (600/800 ms vs 800–2400 ms). This also limits the decoder: an observable that does not change with dose cannot be inverted for dose.
+- Not done: no further tuning of the analysis to find a peak (it would be fitting noise).
+
+## 2026-10-13 07:30 — Confounds confirmed; within-day timer check — no stress effect
+
+- Wet lab confirms both: each day used a different transformation, and the non-transfected cultures were imaged on other days.
+- Both confounds drop out of comparisons made within one day against that day's 0 µM, and of the timer ratio (red/green of one cell does not depend on how much reporter the cell has). Quick check (exploratory, cloud workspace): median red/green of reporter-positive cells (green and red above the non-transfected 90th percentile, ≥ 10 cells per point) lies at 1.3–2.0 (H2O2 7/10: 1.3–2.9) at every dose and time, with the 0 µM controls inside the same range and no trend with time or dose (e.g. 7/10 DTT at ~5 h: 0 µM 1.75, 200 µM 1.24; 6/10 DTT at ~4.5 h: 0 µM 1.70, 200 µM 1.87).
+- So the absence of a stress effect is not explained by the confounds: the comparisons that are free of them show none either.
+
+## 2026-10-13 07:38 — Within-day induction test with detection limits — PASS; corrects the 07:17 and 07:30 readings
+
+- New: `ichnos_image/induction.py`, `scripts/detect_induction.py`, `tests/image/test_induction.py` (5 tests; with `test_timecourse.py` 16 passed in the cloud workspace). Delivered to the laptop, md5 checked.
+- Method: for every transfected day, dose and readout (green, red, share of reporter-positive cells), the mean over time points of (value − same day's 0 µM curve interpolated to that time). 95 % interval and minimum detectable effect (MDE = 2.8 × SE) from 1,000 resamples of cells within fields and fields within time points; bootstrap p, Benjamini–Hochberg q over all 66 comparisons. Dose trend per day and readout: slope against log10(dose). Within-day only, so neither the per-day transformation nor the non-transfected imaging days enter.
+- Result (cloud workspace, seed 0; to be reproduced on the laptop): 12 of 66 comparisons at q < 0.05.
+  - **7/10 H2O2 — a dose-ordered reporter response**: red above 0 µM by +2.0 (75 µM), +2.5 (300 µM), +3.0 grey/s (600 µM), q = 0.007 each; reporter-positive share +14 points at 600 µM (q = 0.007); dose trend positive in all three readouts (positive share q = 0.04; green q = 0.06; red q = 0.15). This is the one day where both channels and the positive share move with dose in the same direction.
+  - 7/10 DTT: positive share +14 points (25 µM) and +9 points (200 µM), but no dose trend (q ≥ 0.45).
+  - 5/10 H2O2: green +1.0 (20 µM) and +0.5 grey/s (75 µM), falling with dose (slope −0.85 per 10-fold, q = 0.007). This day has almost no reporter-positive cells (2.8 % vs 8.5 % in non-transfected), so the change is in autofluorescence, not in the reporter.
+  - 6/10 DTT: green below 0 µM at 10 and 25 µM (−0.9, −1.1); 6/10 H2O2 300 µM below 0 µM. Decreases, no reporter interpretation.
+  - Typical MDE: 0.4–1.0 grey/s for green and red on 5/10 and 6/10, 1.6–4.1 grey/s on 7/10 (fewer time points); 3–13 percentage points for the positive share.
+- Correction: the 07:17 entry ("the 0 µM controls reach the same shares … no dose ordering") and the 07:30 entry ("the comparisons free of the confounds show none either") were drawn from tables read by eye. The formal within-day test finds a dose-dependent response on 7/10 H2O2. The 07:17 conclusion that the peak table is not a stress-response result stands for the other days.
+- Peak time, 7/10 H2O2 only (from `outputs/timecourse_20261013/peaks.csv`): red at 600 µM is still rising at the last sample (7.6 h), so its peak is at or after it; red at 75 µM peaks near 4.8 h (interval 2.6–7.3 h); red at 300 µM is highest at the first sample (1.2 h). Green peaks are not resolved (intervals spanning ~1–7.5 h). No consistent peak time, so none is reported to the wet lab.
+
+## 2026-10-13 07:44 — Induction test reproduced on the laptop — PASS
+
+- `python3 scripts/detect_induction.py --cells outputs/full_20261012_cellpose/cells_all_per_s.csv --out-dir outputs/induction_20261013`: 66 comparisons, 12 with q < 0.05; every effect, interval, MDE and q identical to the cloud-workspace run (seed 0).
+- Answer sent to the wet lab on peak timing: induction is seen only with H2O2 on 7/10; there the red signal at 600 µM is still rising at the last sample (7.6 h) and no single peak time can be given; green shows no resolvable peak.
