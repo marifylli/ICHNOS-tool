@@ -421,3 +421,7 @@ then command, result (numbers), cause (if failed) and next action.
 
 - `python3 -m pytest -q tests/image/test_field_decoder.py tests/image/test_lodo_decoder.py`: 19 passed.
 - Worked example (`make_worked_example.py` on 7/10 H2O2, then `decode_field.py` with that day excluded): 3,328 cells, 16 hidden samples; track record accuracy 0.19 vs chance 0.20, −1.78 bits per field; verdicts 23 unlike reference, 15 not validated, 10 no dose information, 0 dose estimate — identical to the cloud-workspace run.
+
+## 2026-10-13 09:31 — Full test suite on the laptop before the PR to main — PASS
+
+- `python3 -m pytest -q`: 701 passed, 0 failed (4 min 38 s), Cellpose tests included. Warnings only: a NumPy 2.5 deprecation inside scikit-image (`grayreconstruct`), a torch sparse-tensor notice inside Cellpose, and the RankWarning of the small synthetic table in `test_run_analysis.py`. None comes from a failing check.
