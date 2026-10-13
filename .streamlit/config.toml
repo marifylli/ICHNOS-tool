@@ -1,0 +1,12 @@
+# The GUI runs scripts on this computer with paths typed into it, so it is
+# served to this computer only. Do not change the address to share it on a network.
+[server]
+address = "localhost"
+headless = false
+
+[browser]
+gatherUsageStats = false
+serverAddress = "localhost"
+
+[client]
+toolbarMode = "minimal"

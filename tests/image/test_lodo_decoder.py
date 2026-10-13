@@ -128,3 +128,11 @@ def test_script_writes_outputs_and_refuses_an_existing_directory(tmp_path):
     assert set(pd.read_csv(out / "predictions.csv")["held_out"]) == {"20261006_h2o2_tr", "20261007_h2o2_tr"}
     with pytest.raises(SystemExit, match="already exists"):
         main(["--cells", str(path), "--out-dir", str(out)])
+
+
+def test_without_a_time_the_reference_is_the_mean_of_the_days_controls():
+    f = pd.DataFrame({"session_id": ["s"] * 3, "dose_uM": [0.0, 0.0, np.nan], "condition_id": ["a", "b", "x"],
+                      "time_h": [np.nan, np.nan, np.nan], "green": [1.0, 3.0, 10.0], "red": [0.0, 0.0, 0.0],
+                      "positive": [0.1, 0.1, 0.1], "green_pos": [1.0, 3.0, 4.0], "red_pos": [1.0, 1.0, 1.0]})
+    out = ld.add_paired(f).set_index("condition_id")
+    assert out.loc["x", "d_green"] == pytest.approx(10 - 2)
