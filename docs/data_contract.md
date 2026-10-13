@@ -72,6 +72,17 @@ above the 90th percentile of non-transfected cells of its stressor.
 | | `metrics.csv` | stressor × decoder × unit × held-out day | accuracy vs chance, information gain (bits), entropy vs prior, credible coverage |
 | (root) | `run-manifest.json` | run | configuration, input sha256, git commit, output sha256 |
 
+## Decoding a new culture (`decode_field.py`)
+
+Input: a cell table from `run_pipeline.py` + `normalize_exposure.py`.
+`session_id` is free text (one per imaging day); `condition_id` of the form
+`<stressor>_<dose>uM_<label>` marks a known dose (`_0uM_` = same-day
+control), any other name an unknown dose. Output `decoded.csv`: one row per
+field and per sample (fields of one condition averaged) with `p_<dose>uM`,
+`map_dose_uM`, `credible80_uM`, `entropy_vs_prior`, `outside_reference`,
+`verdict`; `validation.csv` holds the decoder's leave-one-day-out scores on
+the reference; `summary.json` settings, fingerprints and verdict counts.
+
 ## Rules every stage keeps
 
 - An existing output path is never overwritten; give a new folder.

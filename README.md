@@ -65,6 +65,10 @@ leave-one-day-out decoder, and records a run manifest:
 python3 scripts/run_analysis.py --config examples/analysis_202610.json --out-dir outputs/analysis_<date>
 ```
 
+To use the tool on your own images, including decoding the dose of a new
+culture with `scripts/decode_field.py`, start with
+[docs/user_guide.md](docs/user_guide.md).
+
 What the data show: a dose-ordered reporter response only on one H2O2 day,
 no resolvable peak time, an uncalibrated model that overpredicts the H2O2
 response and predicts none at the DTT doses used, and no decoder that

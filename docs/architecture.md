@@ -37,6 +37,12 @@ python3 scripts/run_analysis.py --config examples/analysis_202610.json --out-dir
 which writes the four sub-folders and `run-manifest.json` (configuration,
 input sha256, git commit, sha256 of every output). About 2–3 minutes.
 
+Decoding a new culture: `decode_field.py` (`field_decoder`) trains the
+paired or absolute decoder on every reference day, decodes the new fields,
+and attaches a verdict and the decoder's leave-one-day-out record
+([user_guide.md](user_guide.md)). `make_worked_example.py` turns a reference
+day into a "new culture" with hidden doses to try it.
+
 Supporting tools: `score_segmentation.py` scores any segmentation method
 against the hand-marked cells in `data/segmentation_reference/`;
 `check_exposure_linearity.py` tests the camera background against exposure.

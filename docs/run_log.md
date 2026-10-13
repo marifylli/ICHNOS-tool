@@ -404,3 +404,20 @@ then command, result (numbers), cause (if failed) and next action.
 - `scripts/run_workflow.py` (model-based posterior) is not configured for these data: experimental mode requires crosstalk controls and forbids a default bleed value, and it needs a session calibration and a replicate covariance from ≥ 3 independent cultures per condition, none of which exist; steps 9–11 also show the uncalibrated model decoder is confidently wrong. Reasons recorded in `docs/architecture.md`.
 - Docs written: `docs/architecture.md` (packages, the 9-stage route used for the October data with commands, design choices, why not run_workflow), `docs/data_contract.md` (identifiers, manifest, cell table, analysis outputs, rules), `docs/limitations.md` new section "Real-data analysis, October 2026" (measurement, segmentation, design, findings, what would remove the limits), `README.md` status rows and an analysis section.
 - Delivered to the laptop, md5 checked. Next: reproduce with `run_analysis.py` on the laptop.
+
+## 2026-10-13 08:53 — Steps 12–13 reproduced on the laptop — PASS
+
+- `python3 -m pytest -q tests/image/test_run_analysis.py`: 4 passed (2 RankWarnings from the peak parabola on the small synthetic table; not on real data).
+- `python3 scripts/run_analysis.py --config examples/analysis_202610.json --out-dir outputs/analysis_20261013`: 4 steps ok; baseline, peaks, 12/66 induction comparisons at q < 0.05, model comparison (80/132 inside the interval) and decoder scores identical to the separate runs.
+- Committed and pushed as c5b8fcb.
+
+## 2026-10-13 09:08 — User path: decode a new culture, user guide — PASS (code)
+
+- New: `ichnos_image/field_decoder.py`, `scripts/decode_field.py` (trains the paired or absolute decoder on every reference day of a stressor, decodes a new cell table field by field and per sample, attaches a verdict in words and the decoder's leave-one-day-out record; the model decoder is refused), `scripts/make_worked_example.py` (one reference day as a "new culture" with hidden doses), `tests/image/test_field_decoder.py` (9 tests: a validated decoder recovers a hidden dose; no signal → no dose claimed; a shifted culture → "unlike reference"; paired without control → "needs a 0 µM image"; too few cells; model decoder refused; worked example decodes back). `lodo_decoder.field_features` takes external thresholds. Docs: new `docs/user_guide.md`; README, architecture and data contract point to it. Cloud workspace: tests/image 327 passed (the 2 Cellpose tests fail there only). Delivered, md5 checked.
+- Verdicts: dose estimate / not validated / no dose information / unlike reference / needs a 0 µM image / too few cells. A dose is reported only as "dose estimate", which needs an informative posterior (entropy < 90 % of the prior's), a field within the reference range (chi2 99th percentile) and a decoder that gained information on held-out reference days.
+- Worked example (cloud workspace): 7/10 H2O2 as the new culture, doses hidden, day excluded from the reference. Track record on 5/10 and 6/10: accuracy 0.19 vs chance 0.20, −1.78 bits per field. 48 fields: 23 unlike reference, 15 not validated, 10 no dose information, 0 dose estimate; the most probable dose would have been right for 15 % of the 39 hidden fields. The tool declines to name a dose, as it should on these data.
+
+## 2026-10-13 09:22 — User path reproduced on the laptop — PASS
+
+- `python3 -m pytest -q tests/image/test_field_decoder.py tests/image/test_lodo_decoder.py`: 19 passed.
+- Worked example (`make_worked_example.py` on 7/10 H2O2, then `decode_field.py` with that day excluded): 3,328 cells, 16 hidden samples; track record accuracy 0.19 vs chance 0.20, −1.78 bits per field; verdicts 23 unlike reference, 15 not validated, 10 no dose information, 0 dose estimate — identical to the cloud-workspace run.

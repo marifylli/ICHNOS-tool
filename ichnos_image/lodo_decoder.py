@@ -64,13 +64,16 @@ FIT_QUANTILE = 0.99
 
 
 def field_features(cells: pd.DataFrame, quantile: float = 0.9, min_cells: int = 20,
-                   min_positive: int = 5) -> pd.DataFrame:
+                   min_positive: int = 5, limits: pd.DataFrame | None = None) -> pd.DataFrame:
     """One row per transfected field with at least ``min_cells`` usable cells.
 
     ``cells`` must be annotated and carry ``green_af``/``red_af``.
     green_pos/red_pos are NaN when the field has fewer than ``min_positive`` positive cells.
+    ``limits``: reporter-positive thresholds per stressor (``induction.positive_thresholds``);
+    taken from the non-transfected cells of ``cells`` when not given.
     """
-    limits = induction.positive_thresholds(cells, quantile)
+    if limits is None:
+        limits = induction.positive_thresholds(cells, quantile)
     use = cells[tc.usable(cells) & (cells["strain"] == "tr") & cells["stressor"].isin(limits.index)]
     rows = []
     for (session, condition, sample), g in use.groupby(["session_id", "condition_id", "sample_id"]):
