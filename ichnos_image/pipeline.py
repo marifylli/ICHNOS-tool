@@ -18,7 +18,7 @@ import inspect
 
 from ichnos.artifacts import publish_csv_bundle, code_provenance, file_fingerprints
 
-from . import correct, export, extract, segment
+from . import correct, export, extract, instrument, segment
 from .focus import FocusPolicy, score_cells, evaluate_cell
 from .schema import CellRecord
 
@@ -234,7 +234,13 @@ def process_image_set(
     if not np.isfinite(image_set.saturation_value) or image_set.saturation_value <= 0:
         raise ValueError("saturation_value must be finite and positive")
     source_image, mask_source = _segmentation_source(image_set, segmentation_source)
-    labels = segment.segment_cells(source_image, method=segmentation_method, **(segmentation_kwargs or {}))
+    kwargs = dict(segmentation_kwargs or {})
+    if segmentation_method == "brightfield_rim" and "pixel_size_um" not in kwargs:
+        # This method works in micrometres; the pixel size follows from the
+        # objective recorded for this image set, so a mixed-objective batch
+        # gets the right scale per frame.
+        kwargs["pixel_size_um"] = instrument.pixel_size_um(image_set.objective)
+    labels = segment.segment_cells(source_image, method=segmentation_method, **kwargs)
     if mask_source == "brightfield":
         labels = _shift_labels(labels, image_set.brightfield_shift_dy, image_set.brightfield_shift_dx)
 

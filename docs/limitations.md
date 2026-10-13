@@ -212,6 +212,82 @@ threshold may now be retained.
 Regression tests cover objects below, at and above the threshold.
 The complete test suite passes with FutureWarnings treated as errors.
 
+## Real-data analysis, October 2026
+
+What the analysis of the seven imaged sessions (H2O2 transfected 5/10, 6/10,
+7/10; DTT transfected 6/10, 7/10; non-transfected H2O2 8/10 and DTT 9/10)
+can and cannot support. Numbers and commands: [run_log.md](run_log.md).
+No further experiments will be run, so these limits are final for this data set.
+
+### Measurement
+
+- **Bleed-through** of green into red is set to 0.05, an indicative value:
+  no single-colour controls were imaged.
+- **Exposure linearity.** The green background rises linearly with exposure
+  (pooled R² 0.70), which supports per-second normalisation of green. Red
+  was never imaged at several exposures; its normalisation is assumed.
+- **No flat-field correction.** Uneven illumination across the frame adds
+  field-to-field noise. It does not bias within-day comparisons unless doses
+  were imaged systematically at different positions.
+- **Post-snap processing** (a possible look-up table on fluorescence frames)
+  and the constant red background of ~50–60 grey levels remain unexplained
+  (`instrument.UNRESOLVED`).
+- **Signal size.** Median background-corrected cell signal is a few grey
+  levels on an 8-bit scale, so single-cell ratios are noisy.
+
+### Segmentation
+
+- Cellpose on bright-field, default settings: recall 0.91, precision 0.90
+  against 212 cells marked by one person on 7 crops. Points score detection
+  and separation, not outline accuracy. Small dark cells are the main misses.
+- 6 of 294 fields have no matching bright-field frame and are not analysed.
+  6 dense fields were processed with the foreground cap raised from 20 % to
+  50 % of the frame.
+
+### Design
+
+- Each day used a different transformation, and the non-transfected cultures
+  were imaged on other days. Every effect is therefore measured within one
+  day against that day's 0 µM. The autofluorescence baseline is one constant
+  per stressor, not day-matched.
+- Fields of one sample are not independent cultures, so the number of
+  independent units is small: 3 days for H2O2 and 2 for DTT, one culture
+  per dose and day. On 7/10 H2O2 only 2 stressed time points lie inside the
+  0 µM time range.
+
+### Findings that limit claims
+
+- **Induction.** 12 of 66 within-day comparisons are significant (q < 0.05).
+  The only dose-ordered response is H2O2 on 7/10: more reporter-positive cells
+  (+14 percentage points at 600 µM) and higher population red. The brightness
+  of cells already positive does not change detectably. Other days show no
+  dose-ordered response; their detection limits are in `effects.csv`.
+- **Peak time** cannot be given. On 7/10 H2O2 the 600 µM red signal is still
+  rising at the last sample (7.6 h).
+- **Model.** The default, uncalibrated model overpredicts the H2O2 response of
+  reporter-positive cells 1.7–5× at ≥ 75 µM. Assumed fast H2O2 clearance
+  narrows the gap but does not close it. At the DTT doses used (≤ 200 µM) the
+  model predicts no response, consistent with the data; it needs ≥ 1 mM.
+  Clearance rates are assumptions, not measurements.
+- **Decoding.** Leave-one-day-out, no decoder recovers the dose of a single
+  field better than chance, with or without a same-day 0 µM reference. The
+  empirical decoders mostly stay near the prior, but they become overconfident
+  when the held-out day lies outside the spread of the training days (both
+  7/10 days). With one training day (DTT) the between-day spread cannot be
+  estimated at all.
+- **The model-based decoder must not be offered to users** in its current
+  state. For H2O2 it puts every field at 0–75 µM with confidence (−22 bits
+  against the prior). For DTT it returns the prior.
+
+### What would remove these limits
+
+Single-colour controls (bleed-through); one field imaged at several exposures
+(red linearity); flat-field frames; at least 3–4 independent days per
+stressor, each with its own 0 µM; DTT doses around the model's activation
+range (≥ 1 mM) or a recalibrated ER module; a measurement of how fast H2O2
+disappears from the medium; reference samples for a fluorescence-to-model
+calibration.
+
 ## Licensing
 
 `ICHNOS-ablation` is MIT. `DryLabTool`, `Ichnos_PULSE` and `ichnos-fisher`

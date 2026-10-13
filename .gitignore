@@ -18,3 +18,4 @@ artifacts/
 
 outputs/
 !data/acquisition/*.csv
+!data/segmentation_reference/*.csv

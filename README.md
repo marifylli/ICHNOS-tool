@@ -35,6 +35,8 @@ Migrated code and model sources are recorded in
 | Two-observable snapshot decoder | Ratio + reference-normalized green compatibility on a discrete grid; explicit calibration/observation artifacts; separate conditional posterior |
 | End-to-end and visual reports | Implemented for a fixed noise-free synthetic oxidative scenario |
 | Estimator uncertainty | Conditional grid posterior with fitted biological-replicate covariance; calibration/model/covariance uncertainty not propagated |
+| Bright-field segmentation | Cellpose on bright-field, aligned onto fluorescence; recall 0.91 / precision 0.90 against hand-marked cells |
+| Real-data analysis (October 2026) | Time courses, within-day induction test, model comparison and leave-one-day-out decoder run on 7 sessions; see below |
 
 Passing tests verify software behaviour under controlled assumptions.
 They do not establish experimental accuracy for dose or time estimation.
@@ -52,6 +54,30 @@ these summaries to snapshot compatibility or a conditional posterior and writes
 QC/rejection reports. Enforced focus QC requires explicit local thresholds.
 See [the complete workflow and migration notes](docs/integrated_workflow.md),
 including artifact compatibility and the ox/er off-grid robustness benchmark.
+
+## Analysis of the October 2026 data
+
+From the exposure-normalised cell table, one configuration runs the time
+courses, the within-day induction test, the model comparison and the
+leave-one-day-out decoder, and records a run manifest:
+
+```bash
+python3 scripts/run_analysis.py --config examples/analysis_202610.json --out-dir outputs/analysis_<date>
+```
+
+To use the tool on your own images, including decoding the dose of a new
+culture with `scripts/decode_field.py`, start with
+[docs/user_guide.md](docs/user_guide.md).
+
+What the data show: a dose-ordered reporter response only on one H2O2 day,
+no resolvable peak time, an uncalibrated model that overpredicts the H2O2
+response and predicts none at the DTT doses used, and no decoder that
+recovers the dose of a single image better than chance on a held-out day.
+The stages before the cell table and the reasons are in
+[docs/architecture.md](docs/architecture.md); file formats in
+[docs/data_contract.md](docs/data_contract.md); limits in
+[docs/limitations.md](docs/limitations.md); every run, PASS or FAIL, in
+[docs/run_log.md](docs/run_log.md).
 
 ## Install
 

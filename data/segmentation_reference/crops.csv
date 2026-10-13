@@ -1,0 +1,8 @@
+crop,session_id,sample_id,bright_field_path,y0,x0,height,width,pixel_size_um
+20261005_h2o2_tr.png,20261005_h2o2_tr,h2o2_series_75uM_F1,/Users/marifyllikathariou/Downloads/wetransfer_6-10_2026-10-06_1906/igem h2o2/75/0/Image000.tif,418,674,700,700,0.1725
+20261006_dtt_tr.png,20261006_dtt_tr,dtt_0610_25uM_F1,/Users/marifyllikathariou/Downloads/wetransfer_6-10_2026-10-06_1906/igem DTT/25/0/Image000.tif,418,674,700,700,0.1725
+20261006_h2o2_tr.png,20261006_h2o2_tr,h2o2_series_75uM_F1,/Users/marifyllikathariou/Downloads/wetransfer_6-10_2026-10-06_1906/igem h2o2 palia/75/6h/Image000.tif,418,674,700,700,0.1725
+20261007_dtt_tr.png,20261007_dtt_tr,dtt_0710_s1650_100uM_R2,/Users/marifyllikathariou/Downloads/wetransfer_igem-dtt-vol2_2026-10-07_1803/IGEM DTT VOL2/100/4h/Image000 κατω.tif,418,674,700,700,0.1725
+20261007_h2o2_tr.png,20261007_h2o2_tr,h2o2_0710_s1429_20uM_R2,/Users/marifyllikathariou/Downloads/wetransfer_igem-dtt-vol2_2026-10-07_1803/igem h2o2 Vol 2/20/3h/Image000 ΔΕΞΙΑ.tif,418,674,700,700,0.1725
+20261008_h2o2_nt.png,20261008_h2o2_nt,nt_h2o2_0810_75uM_R3,/Users/marifyllikathariou/Downloads/igem h2o2 non transfected/75/0h/Image000 ΚΑΤΩ ΔΕΞΙΑ.tif,418,674,700,700,0.1725
+20261009_dtt_nt.png,20261009_dtt_nt,nt_dtt_0910_45_25uM_R2,/Users/marifyllikathariou/Downloads/igem DTT non transfected/25/45'/Image000 ΔΕΞΙΑ.tif,418,674,700,700,0.1725
