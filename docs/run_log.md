@@ -451,3 +451,11 @@ then command, result (numbers), cause (if failed) and next action.
 
 - Renamed everywhere the application is named: `app/ichnos_app.py` → `app/ichnos_vail.py` (browser tab and page title "ichnos_vail"), package `ichnos_gui` → `ichnos_vail`, tests `tests/gui` → `tests/ichnos_vail`, jobs folder `outputs/gui_jobs` → `outputs/ichnos_vail_jobs` (existing jobs moved), environment variable `ICHNOS_VAIL_JOBS_DIR`, install extra `[ichnos_vail]`; README, user guide and architecture name the app ichnos_vail. Earlier run-log entries keep the old names, as written at the time.
 - Launch: `pip install -e ".[ichnos_vail]"` then `streamlit run app/ichnos_vail.py`. Cloud workspace: tests/ichnos_vail 30 passed. Delivered, md5 checked.
+
+## 2026-10-14 12:43 — Interpretations revised after advisor review
+
+No number changes; four readings in earlier entries (2026-10-13 08:07 step 9, 08:27 steps 10–11, the time-since-stress check, and the wiki text) said more than the data show. Revised in `docs/limitations.md` and the wiki text; the earlier entries stay as written at the time.
+- **DTT and K_act_er.** The absence of a DTT response at ≤ 200 µM is consistent with the model's ER activation range (K_act ≈ 2.3 mM); a null result cannot confirm it. The reporter did not respond to H2O2 on two of three days either, and K_act_er comes from a four-point fit, two points of which were read from the text of the source paper.
+- **Direction of the H2O2 response.** Only on 7/10, the one day with a dose-ordered response, did the model get the direction right; on 5/10 green fell with dose.
+- **Share of positive cells vs brightness.** On 7/10 the response appeared as an increase in the share of reporter-positive cells rather than in their brightness. This rests on one day, on a threshold from non-transfected cells imaged on another day at another exposure, and on the assumed normalisation of red; it is a hypothesis for the next cycle, not a finding.
+- **Timer.** These data do not test the timer: no stress-induced burst of synthesis was detected. Basal promoter activity and day-dependent transformation (both noted 2026-10-13 07:17) are alternative explanations we cannot separate.

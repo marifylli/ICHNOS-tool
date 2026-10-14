@@ -259,15 +259,23 @@ No further experiments will be run, so these limits are final for this data set.
 
 - **Induction.** 12 of 66 within-day comparisons are significant (q < 0.05).
   The only dose-ordered response is H2O2 on 7/10: more reporter-positive cells
-  (+14 percentage points at 600 µM) and higher population red. The brightness
-  of cells already positive does not change detectably. Other days show no
-  dose-ordered response; their detection limits are in `effects.csv`.
+  (+14 percentage points at 600 µM) and higher population red. On that day the
+  response appeared as an increase in the share of reporter-positive cells
+  rather than in their brightness. This rests on one day, on a positive
+  threshold taken from non-transfected cells imaged on another day at another
+  exposure, and on the assumed exposure normalisation of red; it is a
+  hypothesis for the next cycle. On 5/10 green fell with dose. Other days show
+  no dose-ordered response; their detection limits are in `effects.csv`.
 - **Peak time** cannot be given. On 7/10 H2O2 the 600 µM red signal is still
   rising at the last sample (7.6 h).
 - **Model.** The default, uncalibrated model overpredicts the H2O2 response of
   reporter-positive cells 1.7–5× at ≥ 75 µM. Assumed fast H2O2 clearance
   narrows the gap but does not close it. At the DTT doses used (≤ 200 µM) the
-  model predicts no response, consistent with the data; it needs ≥ 1 mM.
+  model predicts no response (K_act ≈ 2.3 mM). The absence of a DTT response
+  is consistent with that range, but a null result cannot confirm it: the
+  reporter did not respond to H2O2 on two of three days either, and K_act_er
+  comes from a four-point fit, two points of which were read from the text of
+  the source paper.
   Clearance rates are assumptions, not measurements.
 - **Decoding.** Leave-one-day-out, no decoder recovers the dose of a single
   field better than chance, with or without a same-day 0 µM reference. The
@@ -279,9 +287,10 @@ No further experiments will be run, so these limits are final for this data set.
   timer, but in these data the timer ratio of reporter-positive cells does not
   change with time since the stress (slopes −0.08 to +0.02 per hour, p ≥ 0.12
   on every day). Leave-one-day-out, the time decoder scores accuracy 0.19
-  against chance 0.31 for H2O2 and 0.20 against 0.28 for DTT. The timer marks
-  time since a burst of new reporter synthesis, and the stress set off none
-  that these data can see.
+  against chance 0.31 for H2O2 and 0.20 against 0.28 for DTT. These data do
+  not test the timer: no stress-induced burst of synthesis was detected. Basal
+  promoter activity and day-dependent transformation are alternative
+  explanations we cannot separate.
 - **The model-based decoder must not be offered to users** in its current
   state. For H2O2 it puts every field at 0–75 µM with confidence (−22 bits
   against the prior). For DTT it returns the prior.
