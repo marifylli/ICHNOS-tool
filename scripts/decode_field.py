@@ -1,7 +1,7 @@
 """Which dose was my culture exposed to? Decode new images against a reference data set.
 
     python3 scripts/decode_field.py \\
-        --reference-cells outputs/full_20261012_cellpose/cells_all_per_s.csv \\
+        --reference-cells data/reference/cells_all_per_s.csv.gz \\
         --cells my_run/cells_per_s.csv --stressor h2o2 --out-dir my_run/decoded
 
 --reference-cells  exposure-normalised cells of the reference experiment: transfected days

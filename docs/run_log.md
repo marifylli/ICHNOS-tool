@@ -459,3 +459,11 @@ No number changes; four readings in earlier entries (2026-10-13 08:07 step 9, 08
 - **Direction of the H2O2 response.** Only on 7/10, the one day with a dose-ordered response, did the model get the direction right; on 5/10 green fell with dose.
 - **Share of positive cells vs brightness.** On 7/10 the response appeared as an increase in the share of reporter-positive cells rather than in their brightness. This rests on one day, on a threshold from non-transfected cells imaged on another day at another exposure, and on the assumed normalisation of red; it is a hypothesis for the next cycle, not a finding.
 - **Timer.** These data do not test the timer: no stress-induced burst of synthesis was detected. Basal promoter activity and day-dependent transformation (both noted 2026-10-13 07:17) are alternative explanations we cannot separate.
+
+## 2026-10-15 12:50 — Release preparation for the iGEM GitLab repository
+
+- Reference cell table added as `data/reference/cells_all_per_s.csv.gz` (gzip -9, 9.4 MB) from `outputs/full_20261012_cellpose/cells_all_per_s.csv` (SHA256 `a7586dbb…a94f`). Check: the compressed file read back with pandas equals the original (`DataFrame.equals` True). PASS.
+- Default paths in `app/ichnos_vail.py`, `examples/analysis_202610.json`, the script docstrings and `docs/user_guide.md` now point to that file. Earlier entries keep the paths they ran with.
+- README: plain-language introduction, the two decoder families, status rows for statistics, empirical dose/time decoders and ichnos_vail, the flat timer result, updated remaining work, AI-assistance, authors, license (Apache 2.0, from the iGEM repository) and citation.
+- `.gitlab-ci.yml` added, mirroring `.github/workflows/tests.yml`.
+- Laptop check: `python -m pytest -q` 740 passed. `decode_field.py` read the `.csv.gz` reference and reproduced the logged track record (time since stress: accuracy 0.19 against chance 0.31). PASS.

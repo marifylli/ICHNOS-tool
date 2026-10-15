@@ -1,6 +1,6 @@
 """Does the reporter respond to the stress? Each dose against the same day's 0 µM.
 
-    python3 scripts/detect_induction.py --cells outputs/full_20261012_cellpose/cells_all_per_s.csv \\
+    python3 scripts/detect_induction.py --cells data/reference/cells_all_per_s.csv.gz \\
         --out-dir outputs/induction_20261013
 
 Writes into --out-dir (which must not exist yet):

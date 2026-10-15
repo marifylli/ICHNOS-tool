@@ -186,7 +186,7 @@ the answers), its 0 µM samples keep their names as the same-day control, and
 the day is left out of the reference.
 
 ```bash
-CELLS=outputs/full_20261012_cellpose/cells_all_per_s.csv
+CELLS=data/reference/cells_all_per_s.csv.gz
 python3 scripts/make_worked_example.py --cells $CELLS --session 20261007_h2o2_tr --out-dir outputs/example_user
 python3 scripts/decode_field.py --reference-cells $CELLS --cells outputs/example_user/cells_per_s.csv \
     --stressor h2o2 --exclude-reference-session 20261007_h2o2_tr --out-dir outputs/example_user/decoded

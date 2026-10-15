@@ -30,7 +30,7 @@ PAGES = ["Start", "1 · Check images", "2 · Images → cells", "3 · Analyse an
          "4 · Decode a new culture", "Jobs"]
 STATE_LABEL = {"created": "⏳ created", "running": "🔄 running", "stopping": "⏹ stopping", "finished": "✅ finished",
                "failed": "❌ failed", "stopped": "⏹ stopped", "interrupted": "⚠️ interrupted"}
-DEFAULT_REFERENCE = ROOT / "outputs" / "full_20261012_cellpose" / "cells_all_per_s.csv"
+DEFAULT_REFERENCE = ROOT / "data" / "reference" / "cells_all_per_s.csv.gz"
 
 
 # ---------------------------------------------------------------- helpers

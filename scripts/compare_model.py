@@ -1,6 +1,6 @@
 """The model's predicted induction against the measured one (fold over the same day's 0 µM).
 
-    python3 scripts/compare_model.py --cells outputs/full_20261012_cellpose/cells_all_per_s.csv \\
+    python3 scripts/compare_model.py --cells data/reference/cells_all_per_s.csv.gz \\
         --out-dir outputs/model_compare_20261013 --clearance none 1 3
 
 Writes into --out-dir (which must not exist yet):
