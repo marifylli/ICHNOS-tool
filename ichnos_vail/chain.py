@@ -14,7 +14,15 @@ from pathlib import Path
 from .jobs import ROOT, _read_json, _write_json
 
 
+def _wait_for_launcher(job: Path, timeout: float = 5.0) -> None:
+    """Let start_job record 'running' first, so it can never overwrite this runner's final state."""
+    end = time.time() + timeout
+    while _read_json(job / "status.json").get("state") in (None, "created") and time.time() < end:
+        time.sleep(0.02)
+
+
 def run(job: Path) -> int:
+    _wait_for_launcher(job)
     spec = _read_json(job / "job.json")
     commands = spec.get("commands", [])
     status = {"state": "running", "pid": os.getpid(), "step": 0, "steps": len(commands), "started": time.time()}
