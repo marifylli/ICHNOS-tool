@@ -1,5 +1,5 @@
 {
-  "cells": "../outputs/full_20261012_cellpose/cells_all_per_s.csv",
+  "cells": "../data/reference/cells_all_per_s.csv.gz",
   "steps": ["timecourse", "induction", "model_compare", "decoder_lodo"],
   "n_boot": 1000,
   "seed": 0,

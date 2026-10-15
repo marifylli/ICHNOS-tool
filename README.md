@@ -1,7 +1,28 @@
 # ICHNOS tool
 
-Research software for fluorescence image processing, ox/er model simulation
-and conditional decoding of ratio and green fluorescence observations.
+Software of the iGEM 2026 team Patras-Med (project ICHNOS). It takes
+fluorescence microscopy images of yeast carrying the ICHNOS stress reporter
+and asks two questions: **how much stress** a culture received (dose) and
+**how long ago** (time since stress). It does three things:
+
+1. **Images → cells:** segments cells on bright-field with Cellpose, measures
+   green and red fluorescence per cell and normalises for exposure.
+2. **Model vs data:** simulates the ICHNOS model (oxidative and ER variants)
+   and compares its predictions with the measured responses.
+3. **Decoding:** estimates dose and time since stress for a new culture, each
+   with a verdict that says whether the estimate can be trusted.
+
+It runs from the command line or from **ichnos_vail**, a local browser app.
+The October 2026 data set it was built on is included
+([data/reference](data/reference/README.md)).
+
+### Two families of decoders
+
+The **empirical decoders** (`ichnos_image.field_decoder`, used by
+`scripts/decode_field.py` and ichnos_vail) learn dose and time windows
+directly from the reference images and are validated leave-one-day-out.
+The **model-based decoders** (`ichnos.decoder`, `ichnos.joint_decoder`, `ichnos.snapshot_decoder`, `ichnos.posterior`) invert the ICHNOS model and are
+verified on synthetic data:
 
 Ratio-only decoders support discrete/checked continuous dose at known times
 and discrete dose–elapsed-time compatibility. A separate two-observable
@@ -37,6 +58,9 @@ Migrated code and model sources are recorded in
 | Estimator uncertainty | Conditional grid posterior with fitted biological-replicate covariance; calibration/model/covariance uncertainty not propagated |
 | Bright-field segmentation | Cellpose on bright-field, aligned onto fluorescence; recall 0.91 / precision 0.90 against hand-marked cells |
 | Real-data analysis (October 2026) | Time courses, within-day induction test, model comparison and leave-one-day-out decoder run on 7 sessions; see below |
+| Within-day statistics | Every dose against the same day's 0 µM: bootstrap intervals, minimum detectable effect, Benjamini–Hochberg q |
+| Empirical decoders (dose and time) | Paired (default) and absolute dose decoders, time-window decoder; verdict per field; leave-one-day-out track record |
+| ichnos_vail | Local Streamlit app: check images, images → cells, analyse, decode; jobs run detached |
 
 Passing tests verify software behaviour under controlled assumptions.
 They do not establish experimental accuracy for dose or time estimation.
@@ -75,6 +99,9 @@ What the data show: a dose-ordered reporter response only on one H2O2 day,
 no resolvable peak time, an uncalibrated model that overpredicts the H2O2
 response and predicts none at the DTT doses used, and no decoder that
 recovers the dose of a single image better than chance on a held-out day.
+The red/green timer ratio did not change with time since stress on any day
+(slopes −0.08 to +0.02 h⁻¹), so these data do not test the timer, and the
+time decoder reports "no time information" rather than a time.
 The stages before the cell table and the reasons are in
 [docs/architecture.md](docs/architecture.md); file formats in
 [docs/data_contract.md](docs/data_contract.md); limits in
@@ -231,15 +258,18 @@ experimental microscope calibration. Image-pipeline sample identifiers,
 QC-filtered population summaries and optional session calibration are
 documented in [docs/population_summary.md](docs/population_summary.md).
 
-1. Align experimental metadata with the simulator: variant, initial dose,
-   actual elapsed times, exposure history and initial model state.
+1. Exposure history and initial model state: elapsed times now come from the
+   wet-lab acquisition log; exposure history and initial state remain assumptions.
 2. Evaluate the exposure assumption and constrain clearance rates using
    experimental data; no experimentally calibrated clearance default exists.
 3. Extend interpolation verification and grid refinement to the intended
    operating domain and sharp-response regions.
 4. Validate two-reference green calibration independently, test snapshot
    identifiability across the intended domain and validate replicate-based likelihoods.
-5. Validate the workflow against experimental references for each variant.
+5. Recalibrate the model on the October fold measurements (H2O2 overpredicted
+   1.7–5×; no DTT response predicted at ≤ 200 µM), then repeat the
+   leave-one-day-out test. The first test against experimental references
+   is done: see [docs/run_log.md](docs/run_log.md).
 
 Copper/CuSO4 modelling is outside the current implementation scope.
 Its images can be processed without a copper-specific model or decoder.
@@ -289,3 +319,29 @@ contracts, CLI usage and the remaining uncertainty/experimental validation work.
 See [snapshot posterior](docs/snapshot_posterior.md) for correlated replicate-noise fitting, explicit priors, discrete credible sets and a synthetic held-out check. This is conditional inference under a fixed model and calibration, not experimental validation.
 
 See [dense posterior verification](docs/dense_posterior_verification.md) for per-node errors, credible-set sizes, clearance misspecification and a ratio-only versus two-observable figure.
+
+## Use of AI assistance
+
+The code and documentation were written in sessions with AI coding
+assistants (Claude, Codex). Design, scientific decisions, data handling,
+review of every change and every run on real data were done by the team.
+All results come from the team's own experiment and are recorded, PASS or
+FAIL, in [docs/run_log.md](docs/run_log.md). See also
+[.claude/RESPONSIBLE_AI_USE.md](.claude/RESPONSIBLE_AI_USE.md).
+
+## Authors
+
+iGEM Patras-Med 2026, dry lab. Tool: Marifylli Kathariou. Migrated code and
+models (see [docs/PROVENANCE.md](docs/PROVENANCE.md)): image pipeline and shared
+schema from DryLabTool (Yannis Balasis), SBML builder and models from
+Ichnos_PULSE (Ioanna), noise methods from ichnos-fisher (Viky).
+Experimental data: the Patras-Med wet lab.
+
+## License
+
+Apache License 2.0; see [LICENSE](LICENSE).
+
+## How to cite
+
+iGEM Patras-Med 2026, *ICHNOS-tool: fluorescence images to stress dose and
+time since stress*, https://gitlab.igem.org/2026/software/patras-med/ichnos-tool

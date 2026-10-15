@@ -1,6 +1,6 @@
 """Turn one reference day into a "new culture" with hidden doses, to try decode_field.py on known answers.
 
-    python3 scripts/make_worked_example.py --cells outputs/full_20261012_cellpose/cells_all_per_s.csv \\
+    python3 scripts/make_worked_example.py --cells data/reference/cells_all_per_s.csv.gz \\
         --session 20261007_h2o2_tr --out-dir outputs/example_user
 
 Writes into --out-dir (which must not exist yet):

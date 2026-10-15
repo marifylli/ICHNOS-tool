@@ -1,6 +1,6 @@
 """Decode the dose of single fields, validated leave-one-day-out.
 
-    python3 scripts/evaluate_decoder_lodo.py --cells outputs/full_20261012_cellpose/cells_all_per_s.csv \\
+    python3 scripts/evaluate_decoder_lodo.py --cells data/reference/cells_all_per_s.csv.gz \\
         --out-dir outputs/decoder_lodo_20261013
 
 Writes into --out-dir (which must not exist yet):

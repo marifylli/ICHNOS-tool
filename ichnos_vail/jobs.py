@@ -39,7 +39,8 @@ def _slug(text: str) -> str:
 
 
 def _write_json(path: Path, data: dict) -> None:
-    tmp = path.with_suffix(path.suffix + ".tmp")
+    # one temporary file per process: ichnos_vail and the runner may write at the same moment
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False))
     os.replace(tmp, path)  # atomic: ichnos_vail never reads a half-written file
 

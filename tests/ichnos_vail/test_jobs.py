@@ -92,3 +92,15 @@ def test_the_jobs_folder_follows_the_environment(tmp_path, monkeypatch):
     monkeypatch.setenv("ICHNOS_VAIL_JOBS_DIR", str(tmp_path / "here"))
     job = jobs.create_job("env", [py("pass")])
     assert job.parent == tmp_path / "here" and os.path.isdir(job)
+
+
+def test_the_runner_waits_for_the_launcher_so_its_final_state_is_never_overwritten(tmp_path):
+    """start_job writes 'running' after launching the runner; a fast job must not finish before that write."""
+    import subprocess
+    job = jobs.create_job("fast", [py("pass")], jobs_dir=tmp_path)
+    runner = subprocess.Popen([sys.executable, "-m", "ichnos_vail.chain", str(job)], cwd=jobs.ROOT)
+    time.sleep(0.5)
+    assert jobs.read_status(job)["state"] == "created"      # still waiting for the launcher
+    jobs._write_json(job / "status.json", {"state": "running", "pid": runner.pid, "step": 0})
+    assert runner.wait(timeout=30) == 0
+    assert jobs.read_status(job)["state"] == "finished"

@@ -1,0 +1,12 @@
+# Runs the test suite on every push and merge request (mirrors .github/workflows/tests.yml).
+stages:
+  - test
+
+tests:
+  stage: test
+  image: python:3.12
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq libgl1 libglib2.0-0 > /dev/null
+    - python -m pip install -q -e ".[image,model,dev]"
+  script:
+    - python -m pytest -q
