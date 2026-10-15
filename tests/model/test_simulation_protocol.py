@@ -332,3 +332,16 @@ def test_protocol_rejects_mismatched_loaded_exposure(
             times_hours=[0.5, 1],
             id_to_name=naming.id_to_name_map(model),
         )
+
+
+def test_without_tellurium_roadrunner_loads_the_same_model(monkeypatch):
+    """CI runners without tellurium wheels load the model through roadrunner directly."""
+    import sys
+    sbml, model, runner, names = _loaded("ox")
+    expected = sim.simulate(runner, end=1, n_points=11, id_to_name=names)
+    monkeypatch.setitem(sys.modules, "tellurium", None)        # import tellurium -> ImportError
+    fallback = sim.load_model(sbml, model=model)
+    result = sim.simulate(fallback, end=1, n_points=11, id_to_name=names)
+    assert result.columns == expected.columns
+    np.testing.assert_allclose(result.time, expected.time)
+    np.testing.assert_allclose(result.values, expected.values, rtol=1e-9, atol=1e-12)

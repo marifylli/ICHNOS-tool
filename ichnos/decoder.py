@@ -6,11 +6,19 @@ import hashlib
 import json
 from pathlib import Path
 import platform
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version as _installed_version
 
 import numpy as np
 
 from .simulate import validate_observation_times
+
+
+def version(name: str) -> str:
+    """Installed version of a package, or 'not installed' (tellurium is optional; see simulate.load_model)."""
+    try:
+        return _installed_version(name)
+    except PackageNotFoundError:
+        return "not installed"
 
 
 def _vector(values, name, *, positive=False):

@@ -93,10 +93,15 @@ def load_model(
     default simulate(). Code that looks for them finds nothing and, depending
     on how it checks, either fails or quietly reports on an empty set.
     """
-    import tellurium as te
-
     solver = solver or SolverSettings()
-    runner = te.loadSBMLModel(sbml_string)
+    try:
+        import tellurium as te
+        runner = te.loadSBMLModel(sbml_string)
+    except ImportError:
+        # tellurium has no wheels for some platforms (e.g. Linux ARM CI runners).
+        # te.loadSBMLModel is exactly roadrunner.RoadRunner(sbml), so the model is the same.
+        import roadrunner
+        runner = roadrunner.RoadRunner(sbml_string)
 
     apply_solver_settings(runner, solver)
 
