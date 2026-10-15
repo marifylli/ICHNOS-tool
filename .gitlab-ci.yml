@@ -1,17 +1,39 @@
 # Runs the test suite on every push and merge request (mirrors .github/workflows/tests.yml).
-# The iGEM GitLab runners are Linux ARM (aarch64). tellurium cannot be installed there
-# (one of its dependencies, python-libnuml, has no ARM wheels), so the model is loaded
-# through libroadrunner directly; ichnos.simulate.load_model does this when tellurium is
-# absent, and te.loadSBMLModel is exactly roadrunner.RoadRunner, so the model is the same.
+#
+# The iGEM GitLab runners are Linux ARM (aarch64) and stop a job after 10 minutes.
+# - tellurium cannot be installed there (its dependency python-libnuml has no ARM wheels),
+#   so the model is loaded through libroadrunner directly; ichnos.simulate.load_model does
+#   this when tellurium is absent, and te.loadSBMLModel is exactly roadrunner.RoadRunner.
+# - The suite is split into three jobs so that each stays under the 10-minute limit.
 stages:
   - test
 
-tests:
-  stage: test
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+.python:
   image: python:3.12
+  stage: test
+  cache:
+    key: pip-py312
+    paths:
+      - .cache/pip
   before_script:
     - apt-get update -qq && apt-get install -y -qq libgl1 libglib2.0-0 > /dev/null
     - python -m pip install -q --upgrade pip
     - python -m pip install -q --prefer-binary -e ".[image,dev]" python-libsbml PyYAML libroadrunner
+
+tests-model:
+  extends: .python
   script:
-    - python -m pytest -q
+    - python -m pytest -q tests/model
+
+tests-decoders:
+  extends: .python
+  script:
+    - python -m pytest -q tests/image/test_field_decoder.py tests/image/test_lodo_decoder.py
+
+tests-image-and-app:
+  extends: .python
+  script:
+    - python -m pytest -q tests/image tests/ichnos_vail --ignore=tests/image/test_field_decoder.py --ignore=tests/image/test_lodo_decoder.py
